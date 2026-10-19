@@ -23,8 +23,8 @@
   }
   h1,h2,h3{text-transform:uppercase;letter-spacing:.09em;color:var(--ink-strong);margin:0}
   h1{font-size:1.5rem;border-bottom:3px solid var(--ink-strong);padding-bottom:.4rem}
-  h2{font-size:.95rem;border-bottom:2px solid var(--ink-strong);padding-bottom:.3rem;margin:2rem 0 1rem}
-  h3{font-size:.8rem;border-left:8px solid var(--accent);padding-left:.55rem;margin:1.4rem 0 .7rem}
+  h2{font-size:.95rem;border-left:6px solid var(--ink-strong);padding-left:.55rem;margin:2rem 0 1rem}
+  h3{font-size:.8rem;border-left:6px solid var(--accent);padding-left:.55rem;margin:1.4rem 0 .7rem}
   .sub{color:var(--muted);text-transform:uppercase;letter-spacing:.14em;font-size:.68rem;margin-top:.5rem}
 
   .ramp{display:grid;grid-template-columns:repeat(16,1fr);gap:0;border:2px solid var(--ink-strong);box-shadow:4px 4px 0 0 var(--ink-strong)}
@@ -61,7 +61,7 @@
 </head>
 <body>
   <h1>e-ink · brutalist theme</h1>
-  <div class="sub">palette: github.com/e-ink-colorscheme/e-ink.nvim (light) &nbsp;·&nbsp; accent: everforest red #F85552 &nbsp;·&nbsp; chrome: brutalist / engineering</div>
+  <div class="sub">palette: github.com/e-ink-colorscheme/e-ink.nvim (light) &nbsp;·&nbsp; accent: everforest red #F85552 &nbsp;·&nbsp; topics: 20 distinct flair hues &nbsp;·&nbsp; chrome: brutalist / engineering</div>
 
   <h2>01 — Monochrome ramp (16 steps)</h2>
   <div class="ramp">
@@ -125,5 +125,33 @@
 
   <h2>06 — Notice block</h2>
   <div class="note">Alerts, code blocks and expanders share the same 2px ink rule + offset shadow treatment.</div>
+
+  <h2>07 — Topic (flair) palette</h2>
+  <div class="key" style="grid-template-columns:repeat(auto-fit,minmax(88px,1fr))">
+    <div class="swatch" style="background:#1F6FB2;color:#fff">#1F6FB2</div>
+    <div class="swatch" style="background:#D1495B;color:#fff">#D1495B</div>
+    <div class="swatch" style="background:#2E8B57;color:#fff">#2E8B57</div>
+    <div class="swatch" style="background:#E0A02E;color:#1A1A1A">#E0A02E</div>
+    <div class="swatch" style="background:#7B4FBF;color:#fff">#7B4FBF</div>
+    <div class="swatch" style="background:#148F8F;color:#fff">#148F8F</div>
+    <div class="swatch" style="background:#E4572E;color:#fff">#E4572E</div>
+    <div class="swatch" style="background:#6A8E23;color:#fff">#6A8E23</div>
+    <div class="swatch" style="background:#C23B72;color:#fff">#C23B72</div>
+    <div class="swatch" style="background:#3C5A99;color:#fff">#3C5A99</div>
+    <div class="swatch" style="background:#8E6E3A;color:#fff">#8E6E3A</div>
+    <div class="swatch" style="background:#35A7A7;color:#1A1A1A">#35A7A7</div>
+    <div class="swatch" style="background:#9B5DE5;color:#fff">#9B5DE5</div>
+    <div class="swatch" style="background:#A83232;color:#fff">#A83232</div>
+    <div class="swatch" style="background:#4C8C3F;color:#fff">#4C8C3F</div>
+    <div class="swatch" style="background:#D9A441;color:#1A1A1A">#D9A441</div>
+    <div class="swatch" style="background:#4E8CC7;color:#fff">#4E8CC7</div>
+    <div class="swatch" style="background:#8FA31E;color:#1A1A1A">#8FA31E</div>
+    <div class="swatch" style="background:#8C4A6B;color:#fff">#8C4A6B</div>
+    <div class="swatch" style="background:#2C7873;color:#fff">#2C7873</div>
+  </div>
+  <div class="note" style="margin-top:1rem">Flairs are mapped to these 20 hues by corpus frequency, so a topic keeps the same colour in the donut, the top-flair bars, the scatter and the top-words chart.</div>
+
+  <h2>08 — Contrast rule</h2>
+  <div class="note">Anything on an ink surface flips to paper text: the active tab, multiselect tags, pressed/hover buttons and highlighted dropdown options. No dark-on-dark text anywhere.</div>
 </body>
 </html>

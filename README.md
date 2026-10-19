@@ -190,8 +190,17 @@ brutalist / engineering chrome: monospace type, 2px ink rules, hard offset
 shadows and zero border-radius.
 
 - The palette and stylesheet live in `app.py` (`EINK`, `EINK_RAMP`,
-  `EINK_CATEGORICAL`, `EINK_SEQ`, `CSS_TEMPLATE`) and every Plotly figure picks
-  them up through the shared `style()` helper.
+  `EINK_TOPICS`, `EINK_SEQ`, `CSS_TEMPLATE`) and every Plotly figure picks them
+  up through the shared `style()` helper.
+- **Flair (topic) colours** come from `EINK_TOPICS` via `flair_palette()`, a
+  stable frequency-ordered map, so a topic keeps the same hue in the donut,
+  the top-flair bars, the scatter and the top-words chart. Chart *chrome* stays
+  monochrome; only topic-coded series use hue.
+- **Contrast:** anything drawn on an ink surface (active tab, multiselect tags,
+  hover/pressed buttons, highlighted dropdown options) flips to paper text, so
+  there is no dark-on-dark text.
+- Top-level section headings use a left rule instead of a full-width underline,
+  so no horizontal line ever sits across the top of a card row.
 - The base theme (paper, ink, monospace font) is set in `.streamlit/config.toml`.
 - `docs/theme-preview.html` is a standalone swatch sheet of the palette and
   components.

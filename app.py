@@ -60,6 +60,31 @@ EINK_RAMP = ["#CCCCCC", "#C2C2C2", "#B8B8B8", "#AEAEAE", "#A4A4A4", "#9A9A9A",
              "#545454", "#4A4A4A", "#474747", "#333333"]
 EINK_CATEGORICAL = ["#333333", "#7C7C7C", "#A4A4A4", "#545454", "#909090",
                     "#C2C2C2", "#686868", "#AEAEAE", "#4A4A4A", "#B8B8B8"]
+# Categorical colours for *topics* (flairs). The chrome stays e-ink, but flairs
+# need real hue separation to stay readable, so this is deliberately wider than
+# the monochrome ramp: muted enough to sit on paper, distinct enough to tell apart.
+EINK_TOPICS = [
+    "#1F6FB2",  # blue
+    "#D1495B",  # red
+    "#2E8B57",  # green
+    "#E0A02E",  # amber
+    "#7B4FBF",  # violet
+    "#148F8F",  # teal
+    "#E4572E",  # orange
+    "#6A8E23",  # olive
+    "#C23B72",  # magenta
+    "#3C5A99",  # navy
+    "#8E6E3A",  # tan
+    "#35A7A7",  # aqua
+    "#9B5DE5",  # purple
+    "#A83232",  # dark red
+    "#4C8C3F",  # forest
+    "#D9A441",  # gold
+    "#4E8CC7",  # cornflower
+    "#8FA31E",  # chartreuse
+    "#8C4A6B",  # plum
+    "#2C7873",  # pine
+]
 EINK_SEQ = [[0.0, "#FBFBF9"], [0.35, "#CCCCCC"], [0.7, "#727272"], [1.0, "#333333"]]
 EINK_SEQ_WARM = [[0.0, "#FBFBF9"], [0.4, "#B8B8B8"], [0.78, "#545454"], [1.0, "#F85552"]]
 EINK_MONO = ('"IBM Plex Mono", ui-monospace, "Cascadia Mono", "JetBrains Mono", '
@@ -102,9 +127,9 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: .09em;
   font-weight: 700 !important;
 }
-h1 { border-bottom: 3px solid ${ink_strong}; padding-bottom: .35rem; }
-h2 { border-bottom: 2px solid ${ink_strong}; padding-bottom: .3rem; }
-h3 { border-left: 8px solid ${accent}; padding-left: .55rem; }
+h1 { border-bottom: 3px solid ${ink_strong}; padding-bottom: .35rem; margin-bottom: 1rem !important; }
+h2 { border-left: 6px solid ${ink_strong}; padding-left: .55rem; margin-bottom: .55rem !important; }
+h3 { border-left: 6px solid ${accent}; padding-left: .55rem; margin-bottom: .45rem !important; }
 p, li, span, label, blockquote { color: ${ink}; }
 a { color: ${ink_strong}; text-decoration: underline; text-underline-offset: 2px; }
 hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
@@ -193,6 +218,25 @@ code, pre, [data-testid="stCodeBlock"] {
 /* expander ---------------------------------------------------------------- */
 [data-testid="stExpander"] { border: 2px solid ${ink_strong} !important; background: ${paper} !important; }
 [data-testid="stExpander"] summary { text-transform: uppercase; letter-spacing: .08em; }
+
+/* contrast fixes — never dark text on an ink (dark) surface ----------------- */
+.stTabs [aria-selected="true"], .stTabs [aria-selected="true"] * { color: ${paper} !important; }
+[data-baseweb="tag"] { background: ${ink_strong} !important; border: none !important; }
+[data-baseweb="tag"] span, [data-baseweb="tag"] div, [data-baseweb="tag"] p,
+[data-baseweb="tag"] label, [data-baseweb="tag"] svg, [data-baseweb="tag"] path {
+  color: ${paper} !important; fill: ${paper} !important;
+}
+.stButton > button:hover, .stButton > button:hover *,
+.stDownloadButton > button:hover, .stDownloadButton > button:hover *,
+.stButton > button[kind="primary"], .stButton > button[kind="primary"] *,
+[data-testid="stFormSubmitButton"] > button, [data-testid="stFormSubmitButton"] > button * {
+  color: ${paper} !important;
+}
+ul[role="listbox"] li, ul[role="listbox"] li * { color: ${ink_strong} !important; }
+ul[role="listbox"] li:hover, ul[role="listbox"] li:hover *,
+ul[role="listbox"] li[aria-selected="true"], ul[role="listbox"] li[aria-selected="true"] * {
+  background-color: ${ink_strong} !important; color: ${paper} !important;
+}
 </style>
 """)
 
@@ -235,6 +279,20 @@ def load_json(name: str) -> dict:
 def cache_ready() -> bool:
     required = ["threads.parquet", "comments.parquet", "dashboard.parquet"]
     return all((CACHE / f).exists() for f in required)
+
+
+@st.cache_data(show_spinner=False)
+def flair_palette() -> dict:
+    """Stable flair -> colour map, ordered by corpus-wide frequency.
+
+    Computed from the *unfiltered* thread cache so a given flair keeps the same
+    colour across every view and filter selection.
+    """
+    th = load("threads")
+    if th.empty or "link_flair_text" not in th.columns:
+        return {}
+    order = th["link_flair_text"].value_counts().index.tolist()
+    return {fl: EINK_TOPICS[i % len(EINK_TOPICS)] for i, fl in enumerate(order)}
 
 
 # --------------------------------------------------------------------------- #
@@ -289,7 +347,7 @@ def style(fig: go.Figure, height: int = 340, **kw) -> go.Figure:
         font=dict(family=EINK_MONO, size=12, color=EINK["ink"]),
         paper_bgcolor=EINK["paper"],
         plot_bgcolor=EINK["paper"],
-        colorway=EINK_CATEGORICAL,
+        colorway=EINK_TOPICS,
         legend=dict(
             orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
             bgcolor="rgba(0,0,0,0)", bordercolor=EINK["ink_strong"], borderwidth=1,
@@ -527,8 +585,10 @@ def page_overview(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
             fl.sort_values("threads"), x="threads", y="link_flair_text", orientation="h",
             labels={"threads": "Threads", "link_flair_text": ""},
             hover_data={"avg_score": ":.1f"},
+            color="link_flair_text", color_discrete_map=flair_palette(),
         )
-        fig.update_traces(marker_color="#7C7C7C")
+        fig.update_traces(marker_line_color=EINK["ink_strong"], marker_line_width=1)
+        fig.update_layout(showlegend=False)
         st.plotly_chart(style(fig, 430), use_container_width=True, key="ov_flair")
 
     with col2:
@@ -538,6 +598,7 @@ def page_overview(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
             samp, x="score", y="total_comments_actual", color="link_flair_text",
             opacity=0.6, labels={"score": "Thread score", "total_comments_actual": "Comments (actual)",
                                  "link_flair_text": "Flair"},
+            color_discrete_map=flair_palette(),
         )
         fig.update_traces(marker=dict(size=6))
         st.plotly_chart(style(fig, 430), use_container_width=True, key="ov_scatter")
@@ -874,8 +935,22 @@ def page_flairs(th: pd.DataFrame) -> None:
         st.subheader("Threads per flair")
         g = th["link_flair_text"].value_counts().reset_index()
         g.columns = ["flair", "threads"]
+        pal = flair_palette()
+        if len(g) > 10:  # keep the donut legible; bundle the long tail
+            head = g.head(10).copy()
+            other = pd.DataFrame([{
+                "flair": f"Other ({len(g) - 10} flairs)",
+                "threads": int(g["threads"].iloc[10:].sum()),
+            }])
+            g = pd.concat([head, other], ignore_index=True)
+        colors = [pal.get(fl, EINK["muted"]) for fl in g["flair"]]
         fig = px.pie(g, names="flair", values="threads", hole=0.45)
-        fig.update_traces(textposition="inside", textinfo="percent")
+        fig.update_traces(
+            textposition="outside", textinfo="label+percent",
+            textfont=dict(family=EINK_MONO, size=11, color=EINK["ink_strong"]),
+            marker=dict(colors=colors, line=dict(color=EINK["ink_strong"], width=1)),
+        )
+        fig.update_layout(showlegend=False)
         st.plotly_chart(style(fig, 460), use_container_width=True, key="fl_pie")
 
     with col2:
@@ -948,6 +1023,7 @@ def page_flairs(th: pd.DataFrame) -> None:
                 fig = px.bar(
                     combo, x="count", y="word", color="flair", orientation="h",
                     barmode="group", labels={"count": "Occurrences", "word": "", "flair": "Flair"},
+                    color_discrete_map=flair_palette(),
                 )
                 st.plotly_chart(style(fig, max(400, 30 * len(selected) * 2)), use_container_width=True, key="fl_words")
             else:
@@ -964,8 +1040,10 @@ def page_flairs(th: pd.DataFrame) -> None:
                 fp2.head(20).sort_values("avg_score"), x="avg_score", y="link_flair_text",
                 orientation="h", labels={"avg_score": "Avg score", "link_flair_text": ""},
                 hover_data={"thread_count": True, "avg_comments_actual": ":.1f"},
+                color="link_flair_text", color_discrete_map=flair_palette(),
             )
-            fig.update_traces(marker_color="#A4A4A4")
+            fig.update_traces(marker_line_color=EINK["ink_strong"], marker_line_width=1)
+            fig.update_layout(showlegend=False)
             st.plotly_chart(style(fig, 520), use_container_width=True, key="fl_ref")
             st.dataframe(
                 fp2.rename(columns=lambda c: c.replace("_", " ").title()),
