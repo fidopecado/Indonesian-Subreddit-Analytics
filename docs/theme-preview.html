@@ -151,7 +151,22 @@
   </div>
   <div class="note" style="margin-top:1rem">Flairs are mapped to these 20 hues by corpus frequency, so a topic keeps the same colour in the donut, the top-flair bars, the scatter and the top-words chart.</div>
 
-  <h2>08 — Contrast rule</h2>
+  <h2>08 — Sequential ramps (magnitude)</h2>
+  <div class="note" style="margin-bottom:1rem">Single-series charts stay ink. Hue is used only where it encodes magnitude &mdash; heatmaps and continuous colour. Every ramp starts at paper and is monotonic in lightness.</div>
+  <div class="sub">blueprint &mdash; threads / neutral magnitude</div>
+  <div style="display:flex;height:32px;border:2px solid var(--ink-strong);box-shadow:3px 3px 0 0 var(--ink-strong);margin:.4rem 0 1rem">
+    <div style="flex:1;background:#FBFBF9"></div><div style="flex:1;background:#E4EDF5"></div><div style="flex:1;background:#C2D6E8"></div><div style="flex:1;background:#8FB3D4"></div><div style="flex:1;background:#4A7FB0"></div><div style="flex:1;background:#17324F"></div>
+  </div>
+  <div class="sub">ember &mdash; comments</div>
+  <div style="display:flex;height:32px;border:2px solid var(--ink-strong);box-shadow:3px 3px 0 0 var(--ink-strong);margin:.4rem 0 1rem">
+    <div style="flex:1;background:#FBFBF9"></div><div style="flex:1;background:#F8E2D6"></div><div style="flex:1;background:#F2C3A6"></div><div style="flex:1;background:#E59468"></div><div style="flex:1;background:#D06A3C"></div><div style="flex:1;background:#7A2B1E"></div>
+  </div>
+  <div class="sub">neutral &mdash; confusion matrix</div>
+  <div style="display:flex;height:32px;border:2px solid var(--ink-strong);box-shadow:3px 3px 0 0 var(--ink-strong);margin:.4rem 0 1rem">
+    <div style="flex:1;background:#FBFBF9"></div><div style="flex:1;background:#CCCCCC"></div><div style="flex:1;background:#5E5E5E"></div><div style="flex:1;background:#0D0D0D"></div>
+  </div>
+
+  <h2>09 — Contrast rule</h2>
   <div class="note">Anything on an ink surface flips to paper text: the active tab, multiselect tags, pressed/hover buttons and highlighted dropdown options. No dark-on-dark text anywhere.</div>
 </body>
 </html>

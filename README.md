@@ -196,6 +196,16 @@ shadows and zero border-radius.
   stable frequency-ordered map, so a topic keeps the same hue in the donut,
   the top-flair bars, the scatter and the top-words chart. Chart *chrome* stays
   monochrome; only topic-coded series use hue.
+- **Colour rule — hue must encode something:** single-series bars, lines and
+  histograms stay **ink** (mapping one variable to hue adds nothing and implies
+  categories that don't exist). Hue is reserved for *categories* (flairs) and
+  *magnitude*:
+  - `EINK_SEQ_BLUE` (blueprint) — thread activity, WIB reference, flair metric
+    heatmap, continuous engagement colour.
+  - `EINK_SEQ_EMBER` — the comment-activity heatmap.
+  - `EINK_SEQ` (neutral greyscale, paper → `#0D0D0D`) — the confusion matrix.
+  Every ramp starts at paper and is monotonic in lightness, so it stays on-theme
+  and remains legible in greyscale print.
 - **Contrast:** anything drawn on an ink surface (active tab, multiselect tags,
   hover/pressed buttons, highlighted dropdown options) flips to paper text, so
   there is no dark-on-dark text.

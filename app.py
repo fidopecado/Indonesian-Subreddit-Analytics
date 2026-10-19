@@ -85,8 +85,15 @@ EINK_TOPICS = [
     "#8C4A6B",  # plum
     "#2C7873",  # pine
 ]
-EINK_SEQ = [[0.0, "#FBFBF9"], [0.35, "#CCCCCC"], [0.7, "#727272"], [1.0, "#333333"]]
-EINK_SEQ_WARM = [[0.0, "#FBFBF9"], [0.4, "#B8B8B8"], [0.78, "#545454"], [1.0, "#F85552"]]
+# Sequential ramps. Single-series charts stay ink; only *magnitude* encodings
+# (heatmaps, continuous colour) get hue, so colour always carries information.
+# Each ramp starts at paper and is monotonic in lightness, so it still reads as
+# e-ink and stays legible if printed in greyscale.
+EINK_SEQ = [[0.0, "#FBFBF9"], [0.35, "#CCCCCC"], [0.7, "#5E5E5E"], [1.0, "#0D0D0D"]]      # neutral / fallback
+EINK_SEQ_BLUE = [[0.0, "#FBFBF9"], [0.2, "#E4EDF5"], [0.4, "#C2D6E8"],
+                 [0.6, "#8FB3D4"], [0.8, "#4A7FB0"], [1.0, "#17324F"]]                    # threads / neutral magnitude
+EINK_SEQ_EMBER = [[0.0, "#FBFBF9"], [0.2, "#F8E2D6"], [0.4, "#F2C3A6"],
+                  [0.6, "#E59468"], [0.8, "#D06A3C"], [1.0, "#7A2B1E"]]                   # comments
 EINK_MONO = ('"IBM Plex Mono", ui-monospace, "Cascadia Mono", "JetBrains Mono", '
              'Consolas, "Courier New", monospace')
 
@@ -970,7 +977,7 @@ def page_flairs(th: pd.DataFrame) -> None:
             profile, x="avg_comments", y="avg_score", size="threads",
             color="avg_ratio", hover_name="link_flair_text",
             labels={"avg_comments": "Avg comments", "avg_score": "Avg score", "avg_ratio": "Avg ratio"},
-            color_continuous_scale=EINK_SEQ_WARM,
+            color_continuous_scale=EINK_SEQ_BLUE,
         )
         st.plotly_chart(style(fig, 460), use_container_width=True, key="fl_scatter")
 
@@ -995,7 +1002,7 @@ def page_flairs(th: pd.DataFrame) -> None:
             profile[metrics].max() - profile[metrics].min()
         ).replace(0, 1)
         fig = px.imshow(
-            norm.T, aspect="auto", color_continuous_scale=EINK_SEQ,
+            norm.T, aspect="auto", color_continuous_scale=EINK_SEQ_BLUE,
             labels=dict(x="Flair", y="Metric", color="Normalized"),
             text_auto=".2f",
         )
@@ -1074,7 +1081,7 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
         .reindex(DOW_ORDER).reindex(columns=range(24)).fillna(0)
     )
     fig = px.imshow(
-        pivot, aspect="auto", color_continuous_scale=EINK_SEQ,
+        pivot, aspect="auto", color_continuous_scale=EINK_SEQ_BLUE,
         labels=dict(x="Hour (WIB)", y="", color="Threads"),
     )
     fig.update_xaxes(dtick=2)
@@ -1087,7 +1094,7 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
             .reindex(DOW_ORDER).reindex(columns=range(24)).fillna(0)
         )
         fig = px.imshow(
-            cp, aspect="auto", color_continuous_scale=EINK_SEQ_WARM,
+            cp, aspect="auto", color_continuous_scale=EINK_SEQ_EMBER,
             labels=dict(x="Hour (WIB)", y="", color="Comments"),
         )
         fig.update_xaxes(dtick=2)
@@ -1139,7 +1146,7 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
                            values="threads_count", aggfunc="sum")
             .reindex(DOW_ORDER).reindex(columns=range(24)).fillna(0)
         )
-        fig = px.imshow(grid, aspect="auto", color_continuous_scale=EINK_SEQ,
+        fig = px.imshow(grid, aspect="auto", color_continuous_scale=EINK_SEQ_BLUE,
                         labels=dict(x="Hour (WIB)", y="", color="Threads"))
         fig.update_xaxes(dtick=2)
         st.plotly_chart(style(fig, 380), use_container_width=True, key="tm_ref")
