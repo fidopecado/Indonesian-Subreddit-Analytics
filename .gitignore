@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---------------------------------------------------------------------------
+# Virtual environments
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+env/
+
+# ---------------------------------------------------------------------------
+# Data — never version large source data, caches, or derived artifacts.
+# Everything under these paths is reproducible from the pipeline or the raw
+# source CSVs (which live outside version control for size reasons).
+# ---------------------------------------------------------------------------
+data/
+artifacts/
+cache/
+*.parquet
+*.csv
+*.feather
+
+# ---------------------------------------------------------------------------
+# Model / Hugging Face caches
+# ---------------------------------------------------------------------------
+.hf_cache/
+.cache/
+
+# ---------------------------------------------------------------------------
+# Editors / OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+*.log

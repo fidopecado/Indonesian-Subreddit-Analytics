@@ -1,0 +1,17 @@
+# GPU / transformer pipeline for sentiment labeling.
+# Used by src/sentiment_gpu.py (Colab/Kaggle, resumable) and
+# src/sentiment_pilot.py (local Windows pilot).
+#
+# Install:  python -m pip install -r requirements-gpu.txt
+# A CUDA-capable environment is strongly recommended; CPU works for small runs.
+-r requirements.txt
+
+torch>=2.2
+transformers>=4.40,<5
+sentencepiece>=0.2
+
+# Language detection. ftlangdetect (fasttext) is preferred by sentiment_pilot.py
+# and falls back to langdetect, then to routing everything through the
+# Indonesian model if neither is installed.
+langdetect>=1.0.9
+ftlangdetect>=1.0.4
