@@ -110,6 +110,453 @@ SENTIMENT_COLORS = {
     "negative": EINK["accent"],
 }
 
+# --------------------------------------------------------------------------- #
+# i18n — the interface is bilingual (Indonesian / English).
+#
+# Only UI *chrome* is translated: headings, captions, metric labels, axis
+# titles, column headers, buttons. The data itself (flair names, sentiment
+# labels, author UUIDs, post titles) is never touched.
+#
+# Keys are dotted ids. A missing key renders as the literal id, which makes
+# gaps obvious in the UI instead of silently falling back to the wrong language.
+# --------------------------------------------------------------------------- #
+DEFAULT_LANG = "id"
+LANGS = {"id": "🇮🇩 Bahasa Indonesia", "en": "🇬🇧 English"}
+
+
+def lang() -> str:
+    return st.session_state.get("lang", DEFAULT_LANG)
+
+
+def t(key: str) -> str:
+    """Look up a UI string: (Indonesian, English). Unknown keys pass through."""
+    pair = STRINGS.get(key)
+    if pair is None:
+        return key
+    return pair[0] if lang() == "id" else pair[1]
+
+
+STRINGS: dict[str, tuple[str, str]] = {
+    # ---------------------------------------------------------- navigation
+    "nav.overview": ("Ikhtisar", "Overview"),
+    "nav.threads": ("Thread", "Threads"),
+    "nav.comments": ("Komentar", "Comments"),
+    "nav.authors": ("Penulis", "Authors"),
+    "nav.flairs": ("Flair", "Flairs"),
+    "nav.timing": ("Waktu", "Timing"),
+    "nav.sentiment": ("Sentimen", "Sentiment"),
+    "nav.methodology": ("Metodologi", "Methodology"),
+    # ------------------------------------------------------------- sidebar
+    "sb.subtitle": ("Dataset subreddit Indonesia", "Indonesian subreddit dataset"),
+    "sb.filters": ("🔎 Filter", "🔎 Filters"),
+    "sb.filters_help": ("Setiap perubahan menyaring ulang data dan menyegarkan semua grafik.",
+                        "Every change re-filters the data and refreshes all charts."),
+    "sb.time_range": ("Rentang waktu", "Time range"),
+    "sb.spans": ("Data mencakup {span}", "Data spans {span}"),
+    "sb.quick_range": ("Rentang cepat", "Quick range"),
+    "sb.all_time": ("Sepanjang waktu", "All time"),
+    "sb.last7": ("7 hari terakhir", "Last 7 days"),
+    "sb.last30": ("30 hari terakhir", "Last 30 days"),
+    "sb.last90": ("90 hari terakhir", "Last 90 days"),
+    "sb.custom": ("Khusus…", "Custom…"),
+    "sb.custom_range": ("Rentang khusus", "Custom range"),
+    "sb.flair": ("Flair", "Flair"),
+    "sb.topics": ("Topik", "Topics"),
+    "sb.topics_help": ("Semua flair dipilih secara bawaan kecuali yang sangat langka (<20 thread).",
+                       "All flairs are selected by default except very rare ones (<20 threads)."),
+    "sb.search": ("Pencarian", "Search"),
+    "sb.author_q": ("UUID penulis mengandung", "Author UUID contains"),
+    "sb.title_q": ("Judul mengandung", "Title contains"),
+    "sb.thresholds": ("Ambang batas", "Thresholds"),
+    "sb.thread_score": ("Skor thread", "Thread score"),
+    "sb.flags": ("Penanda", "Flags"),
+    "sb.inc_nsfw": ("Sertakan NSFW", "Include NSFW"),
+    "sb.inc_locked": ("Sertakan terkunci", "Include locked"),
+    "sb.inc_mod": ("Sertakan kiriman mod", "Include mod posts"),
+    "sb.inc_stick": ("Sertakan tersemat", "Include stickied"),
+    "sb.inc_spoil": ("Sertakan spoiler", "Include spoilers"),
+    "sb.inc_edited": ("Sertakan yang diedit", "Include edited"),
+    "sb.content": ("Konten", "Content"),
+    "sb.exclude_auto": ("Kecualikan thread otomatis", "Exclude auto-posted threads"),
+    "sb.exclude_auto_help": (
+        "Daily Chat, Weekend Chat, dan Special Thread — diposting automod dengan jadwal "
+        "tetap. Hanya ~2% thread tetapi ~22% dari seluruh komentar, sehingga "
+        "menyimpangkan rata-rata dan analisis waktu.",
+        "Daily Chat, Weekend Chat and Special Threads — posted by automod on a fixed "
+        "schedule. Only ~2% of threads but ~22% of all comments, so they skew averages "
+        "and any timing analysis."),
+    "sb.post_type": ("Tipe kiriman", "Post type"),
+    "sb.all": ("Semua", "All"),
+    "sb.text": ("Teks", "Text"),
+    "sb.link": ("Tautan", "Link"),
+    "sb.min_comments": ("Minimum komentar (aktual)", "Minimum comments (actual)"),
+    "sb.min_comments_help": (
+        "Memakai total_comments_actual — hitungan gabungan sebenarnya, bukan penghitung "
+        "Reddit yang usang.",
+        "Uses total_comments_actual — the true joined count, not Reddit's stale counter."),
+    "sb.threads_selected": ("Thread terpilih", "Threads selected"),
+    "sb.comments_selected": ("Komentar terpilih", "Comments selected"),
+    "sb.pct_of": ("{tp} dari thread • {cp} dari komentar", "{tp} of threads • {cp} of comments"),
+    "sb.clear_cache": ("🔄 Bersihkan cache", "🔄 Clear cached data"),
+    # -------------------------------------------------------- shared labels
+    "lbl.threads": ("Thread", "Threads"),
+    "lbl.comments": ("Komentar", "Comments"),
+    "lbl.score": ("Skor", "Score"),
+    "lbl.thread_score": ("Skor thread", "Thread score"),
+    "lbl.comments_actual": ("Komentar (aktual)", "Comments (actual)"),
+    "lbl.flair": ("Flair", "Flair"),
+    "lbl.share": ("Bagian komentar", "Share of comments"),
+    "lbl.hour": ("Jam (WIB)", "Hour (WIB)"),
+    "lbl.word": ("Kata", "Word"),
+    "lbl.occurrences": ("Kemunculan", "Occurrences"),
+    "lbl.metric": ("Metrik", "Metric"),
+    "lbl.normalized": ("Ternormalisasi", "Normalized"),
+    "lbl.avg_ratio": ("Rata-rata rasio", "Avg ratio"),
+    "lbl.avg_score": ("Rata-rata skor", "Avg score"),
+    "lbl.avg_comments": ("Rata-rata komentar", "Avg comments"),
+    "lbl.created": ("Dibuat (WIB)", "Created (WIB)"),
+    "lbl.author": ("Penulis", "Author"),
+    "lbl.title": ("Judul", "Title"),
+    "lbl.replies_per_thread": ("Balasan / thread", "Replies / thread"),
+    "lbl.score_per_thread": ("Skor / thread", "Score / thread"),
+    "lbl.ratio": ("Rasio", "Ratio"),
+    "lbl.edited": ("Diedit", "Edited"),
+    "lbl.locked": ("Terkunci", "Locked"),
+    "lbl.comment": ("Komentar", "Comment"),
+    "lbl.thread": ("Thread", "Thread"),
+    "lbl.words": ("Kata", "Words"),
+    "lbl.chars": ("Karakter", "Chars"),
+    "lbl.med_score": ("Median skor", "Median score"),
+    "lbl.total_score": ("Total skor", "Total score"),
+    "lbl.avg_comment_score": ("Rata-rata skor komentar", "Avg comment score"),
+    "lbl.comments_received": ("Komentar diterima", "Comments received"),
+    "lbl.comments_written": ("Komentar ditulis", "Comments written"),
+    "lbl.comment_score": ("Skor komentar", "Comment score"),
+    "lbl.total_engagement": ("Total interaksi", "Total engagement"),
+    "lbl.avg_thread_score": ("Rata-rata skor thread", "Avg thread score"),
+    "lbl.threads_created": ("Thread dibuat", "Threads created"),
+    "lbl.label": ("Label", "Label"),
+    "lbl.model_label": ("Label model", "Model label"),
+    "lbl.ref_label": ("Label rujukan LLM", "LLM reference label"),
+    "lbl.llm_label": ("Label LLM", "LLM label"),
+    "lbl.hf_label": ("Label model", "Model label"),
+    "lbl.confidence": ("Keyakinan", "Confidence"),
+    "lbl.route": ("Rute", "Route"),
+    "lbl.support": ("Dukungan LLM", "LLM support"),
+    "lbl.precision": ("Presisi vs. LLM", "Precision vs. LLM"),
+    "lbl.recall": ("Recall vs. LLM", "Recall vs. LLM"),
+    "lbl.f1": ("F1", "F1"),
+    # ------------------------------------------------------------ sentiment
+    "sent.positive": ("positif", "positive"),
+    "sent.neutral": ("netral", "neutral"),
+    "sent.negative": ("negatif", "negative"),
+    # -------------------------------------------------------------- overview
+    "ov.title": ("Ikhtisar", "Overview"),
+    "ov.comments": ("Komentar", "Comments"),
+    "ov.contributors": ("Kontributor", "Contributors"),
+    "ov.total_score": ("Total skor", "Total score"),
+    "ov.avg_score": ("Rata-rata skor", "Avg score"),
+    "ov.caption": (
+        "Komentar yang ditampilkan hanya milik {n} thread yang tersaring. Total komentar "
+        "aktual pada thread tersebut: **{a}**.",
+        "Comments shown are those belonging to the {n} filtered threads. Actual comment "
+        "total across them: **{a}**."),
+    "ov.activity": ("Aktivitas dari waktu ke waktu (WIB)", "Activity over time (WIB)"),
+    "ov.bucket": ("Rentang", "Bucket"),
+    "ov.daily": ("Harian", "Daily"),
+    "ov.weekly": ("Mingguan", "Weekly"),
+    "ov.monthly": ("Bulanan", "Monthly"),
+    "ov.top_flairs": ("Flair teratas", "Top flairs"),
+    "ov.score_vs_comments": ("Skor vs. komentar", "Score vs. comments"),
+    "ov.score_dist": ("Sebaran skor thread", "Distribution of thread scores"),
+    # --------------------------------------------------------------- threads
+    "th.title": ("Thread", "Threads"),
+    "th.median_score": ("Median skor", "Median score"),
+    "th.median_comments": ("Median komentar", "Median comments"),
+    "th.text_link": ("Teks / Tautan", "Text / Link"),
+    "th.tab_top": ("Thread teratas", "Top threads"),
+    "th.tab_browse": ("Jelajahi / cari", "Browse / search"),
+    "th.tab_detail": ("Detail flair", "Flair detail"),
+    "th.rank_by": ("Urutkan berdasarkan", "Rank by"),
+    "th.opt_score": ("Skor", "Score"),
+    "th.opt_comments": ("Komentar (aktual)", "Comments (actual)"),
+    "th.opt_ratio": ("Rasio upvote", "Upvote ratio"),
+    "th.opt_avgcs": ("Rata-rata skor komentar", "Avg comment score"),
+    "th.opt_avg_score": ("Rata-rata skor", "Average score"),
+    "th.opt_avg_comments": ("Rata-rata komentar", "Average comments"),
+    "th.opt_avg_ratio": ("Rata-rata rasio upvote", "Average upvote ratio"),
+    "th.opt_total_score": ("Total skor", "Total score"),
+    "th.opt_threads": ("Jumlah thread", "Thread count"),
+    "th.show_top_n": ("Tampilkan N teratas", "Show top N"),
+    "th.search_caption": ("Cari di dalam kumpulan thread yang sedang tersaring.",
+                          "Search within the currently filtered thread set."),
+    "th.search_input": ("Cari di judul atau isi thread", "Search title or body text"),
+    "th.matching": ("{n} thread cocok", "{n} matching threads"),
+    "th.download": ("⬇ Unduh thread tersaring (CSV)", "⬇ Download filtered threads (CSV)"),
+    "th.flair_comparison": ("Perbandingan flair", "Flair comparison"),
+    # -------------------------------------------------------------- comments
+    "cm.title": ("Komentar", "Comments"),
+    "cm.commenters": ("Komentator", "Commenters"),
+    "cm.median_score": ("Median skor", "Median score"),
+    "cm.avg_length": ("Rata-rata panjang", "Avg length"),
+    "cm.caption": ("Skor komentar diambil langsung dari berkas mentah (728K baris), "
+                   "jadi statistik ini dihitung ulang secara live mengikuti filter Anda.",
+                   "Comment scores reach back to the raw comments file (728K rows), so "
+                   "these stats recompute live with your filters."),
+    "cm.tab_activity": ("Aktivitas", "Activity"),
+    "cm.tab_top": ("Komentar terbaik & terburuk", "Top & bottom comments"),
+    "cm.tab_len": ("Panjang teks", "Text length"),
+    "cm.volume": ("Volume komentar dari waktu ke waktu (WIB)", "Comment volume over time (WIB)"),
+    "cm.bucket": ("Rentang", "Bucket"),
+    "cm.score_dist": ("Sebaran skor komentar", "Score distribution"),
+    "cm.per_thread": ("Komentar per thread", "Comments per thread"),
+    "cm.top_threads": ("Thread dengan komentar terbanyak", "Top comment threads"),
+    "cm.top_caption": ("Komentar dicocokkan ke thread tersaring Anda lewat `thread_id`.",
+                       "Comments are matched to your filtered threads by `thread_id`."),
+    "cm.highest": ("**Skor tertinggi**", "**Highest-scored**"),
+    "cm.lowest": ("**Skor terendah**", "**Lowest-scored**"),
+    "cm.sampling": ("Mengambil sampel 200K komentar agar tampilan tetap responsif.",
+                    "Sampling 200K comments for responsiveness on this view."),
+    "cm.len_dist": ("Sebaran panjang komentar", "Comment length distribution"),
+    "cm.median_words": ("Median kata", "Median words"),
+    "cm.median_chars": ("Median karakter", "Median characters"),
+    "cm.longest": ("**Komentar terpanjang pada kumpulan tersaring**",
+                   "**Longest comments in the filtered set**"),
+    "cm.chars": ("{n} karakter", "{n} chars"),
+    "cm.words_per_comment": ("Kata per komentar", "Words per comment"),
+    "cm.score_axis": ("Skor komentar", "Comment score"),
+    # --------------------------------------------------------------- authors
+    "au.title": ("Penulis", "Authors"),
+    "au.caption": ("Berkas papan peringkat adalah snapshot statis dan mengabaikan filter. "
+                   "Tabel live di bawah dihitung ulang dari pilihan Anda.",
+                   "Leaderboard file is a static snapshot and ignores filters. The live "
+                   "table below is recomputed from your selections."),
+    "au.tab_live": ("Peringkat live", "Live ranking"),
+    "au.tab_static": ("Berkas papan peringkat", "Static leaderboard file"),
+    "au.rank_by": ("Urutkan penulis berdasarkan", "Rank authors by"),
+    "au.opt_total_engagement": ("Total interaksi", "Total engagement"),
+    "au.opt_thread_score": ("Skor thread", "Thread score"),
+    "au.opt_comment_score": ("Skor komentar", "Comment score"),
+    "au.opt_threads": ("Thread", "Threads"),
+    "au.opt_comments": ("Komentar", "Comments"),
+    "au.show_top_n": ("Tampilkan N teratas", "Show top N"),
+    "au.scatter_x": ("Thread dibuat", "Threads created"),
+    "au.scatter_y": ("Komentar ditulis", "Comments written"),
+    "au.download": ("⬇ Unduh peringkat ini (CSV)", "⬇ Download this ranking (CSV)"),
+    "au.static_info": ("Snapshot statis dari `author_leaderboard.csv` — menampilkan penulis "
+                       "teratas versi dataset, tidak terpengaruh filter.",
+                       "Static snapshot from `author_leaderboard.csv` — shows the dataset's "
+                       "own top authors, independent of filters."),
+    "au.top_threads": ("Thread penulis teratas", "Top author threads"),
+    "au.top_comments": ("Komentar penulis teratas", "Top author comments"),
+    "au.missing": ("author_leaderboard.parquet tidak ditemukan di cache.",
+                   "author_leaderboard.parquet not found in cache."),
+    # ---------------------------------------------------------------- flairs
+    "lbl.thread_count": ("Jumlah thread", "Thread count"),
+    "lbl.avg_comments_actual": ("Rata-rata komentar (aktual)", "Avg comments (actual)"),
+    "fl.title": ("Flair", "Flairs"),
+    "fl.caption": ("Tampilan live dihitung ulang dari thread tersaring Anda.",
+                   "Live view recomputed from your filtered threads."),
+    "fl.threads_per_flair": ("Thread per flair", "Threads per flair"),
+    "fl.other": ("Lainnya ({n} flair)", "Other ({n} flairs)"),
+    "fl.engagement_profile": ("Profil interaksi per flair", "Engagement profile by flair"),
+    "fl.norm_heatmap": ("Heatmap metrik ternormalisasi", "Normalized metric heatmap"),
+    "fl.not_enough": ("Thread per flair tidak cukup setelah difilter untuk membuat heatmap.",
+                      "Not enough threads per flair after filtering to build a heatmap."),
+    "fl.tab_words": ("Kata teratas per flair", "Top words per flair"),
+    "fl.tab_reference": ("Referensi performa flair", "Reference flair performance"),
+    "fl.compare_flairs": ("Bandingkan flair", "Compare flairs"),
+    "fl.select_one": ("Pilih minimal satu flair.", "Select at least one flair."),
+    "fl.words_missing": ("flair_top_words.parquet tidak ditemukan di cache.",
+                         "flair_top_words.parquet not found in cache."),
+    "fl.perf_missing": ("flair_performance.parquet tidak ditemukan di cache.",
+                        "flair_performance.parquet not found in cache."),
+    "fl.ref_info": ("Snapshot statis dari `flair_performance.csv`.",
+                    "Static snapshot from `flair_performance.csv`."),
+    # ---------------------------------------------------------------- timing
+    "tm.title": ("Waktu", "Timing"),
+    "tm.caption": ("Semua waktu dikonversi ke WIB (UTC+7). Live dari thread & komentar tersaring.",
+                   "All times converted to WIB (UTC+7). Live from filtered threads & comments."),
+    "tm.no_threads": ("Tidak ada thread untuk filter saat ini.", "No threads for the current filters."),
+    "tm.thread_heat": ("Heatmap aktivitas thread (hari × jam, WIB)",
+                       "Thread activity heatmap (day × hour, WIB)"),
+    "tm.comment_heat": ("Heatmap aktivitas komentar (hari × jam, WIB)",
+                        "Comment activity heatmap (day × hour, WIB)"),
+    "tm.comment_caption": (
+        "Komentar mengikuti thread induknya, jadi tidak disaring per tanggal secara "
+        "individual — thread di dalam rentang tetap bisa menyumbang komentar yang "
+        "diposting setelahnya. Jam 07:00 mendominasi karena automod memposting "
+        "Daily/Weekend Chat Thread saat itu.",
+        "Comments ride along with their parent thread, so they are *not* date-filtered "
+        "individually — a thread inside the window can still contribute comments posted "
+        "after it. Hour 07:00 dominates because automod posts the Daily/Weekend Chat "
+        "Threads then."),
+    "tm.by_dow": ("Thread per hari", "Threads by day of week"),
+    "tm.by_hour": ("Thread per jam", "Threads by hour of day"),
+    "tm.replies_score": ("Balasan & skor per jam (thread organik)",
+                         "Replies & score per hour (organic threads)"),
+    "tm.no_organic": ("Tidak ada thread organik untuk filter saat ini.",
+                      "No organic threads for the current filters."),
+    "tm.trace_median_replies": ("Median balasan / thread", "Median replies / thread"),
+    "tm.trace_mean": ("Rata-rata (peka ekor viral)", "Mean (viral-tail sensitive)"),
+    "tm.trace_median_score": ("Median skor / thread", "Median score / thread"),
+    "tm.eng_caption": (
+        "Median dipakai sebagai angka utama karena sebaran balasan dan skor berekor berat; "
+        "belah ketupat merah adalah rata-ratanya, sebagai pembanding. Jam tersibuk: "
+        "**{hour} WIB** ({med:.0f} median balasan). n = {n} thread organik — thread "
+        "otomatis dikecualikan.",
+        "Median is the headline because the reply and score distributions are heavy-tailed; "
+        "the red diamond is the mean, for contrast. Busiest hour: **{hour} WIB** "
+        "({med:.0f} median replies). n = {n} organic threads — auto-posted chat threads "
+        "are excluded."),
+    "tm.reference": ("Referensi: berkas aktivitas per jam WIB", "Reference: WIB hourly activity file"),
+    "tm.ref_missing": ("wib_hourly_activity.parquet tidak ditemukan di cache.",
+                       "wib_hourly_activity.parquet not found in cache."),
+    "tm.hover_replies": ("Jam %{x}:00 WIB<br>median %{y:.0f} balasan<br>rata-rata "
+                         "%{customdata[1]:.0f} · n=%{customdata[0]}<extra></extra>",
+                         "Hour %{x}:00 WIB<br>median %{y:.0f} replies<br>mean "
+                         "%{customdata[1]:.0f} · n=%{customdata[0]}<extra></extra>"),
+    "tm.hover_mean": ("Jam %{x}:00 WIB<br>rata-rata %{y:.0f} balasan<extra></extra>",
+                      "Hour %{x}:00 WIB<br>mean %{y:.0f} replies<extra></extra>"),
+    "tm.hover_score": ("Jam %{x}:00 WIB<br>median skor %{y:.0f}<extra></extra>",
+                       "Hour %{x}:00 WIB<br>median score %{y:.0f}<extra></extra>"),
+    "tm.ref_info": (
+        "Snapshot statis dari `wib_hourly_activity.csv` (grid 7×24 penuh). **Baseline "
+        "sepanjang waktu — sengaja tidak mengikuti filter sidebar.** Kolom `total_comments` "
+        "dan `avg_score` juga ada di berkas tetapi tidak digambar di sini.",
+        "Static snapshot from `wib_hourly_activity.csv` (full 7×24 grid). **All-time "
+        "baseline — it deliberately does not follow the sidebar filters.** Columns "
+        "`total_comments` and `avg_score` also exist in the file but are not plotted here."),
+    # ------------------------------------------------------------- sentiment
+    "se.title": ("Analitik sentimen", "Sentiment analytics"),
+    "se.coverage": ("Cakupan dan distribusi utama", "Coverage and headline distribution"),
+    "se.full_corpus": ("Komentar korpus penuh", "Full corpus comments"),
+    "se.llm_sample": ("Sampel rujukan LLM", "LLM reference sample"),
+    "se.mean_conf": ("Rata-rata keyakinan model", "Model mean confidence"),
+    "se.low_conf": ("Label model, keyakinan rendah <0,60", "Model labels, low conf <0.60"),
+    "se.series_raw": ("Model (mentah, 678K)", "Model (raw, 678K)"),
+    "se.series_llm": ("Rujukan LLM (10K)", "LLM reference (10K)"),
+    "se.series_corrected": ("Model (koreksi bias)", "Model (bias-corrected)"),
+    "se.dist_caption": (
+        "Model mentah menyebut dua per tiga komentar negatif dan nyaris menghapus kategori "
+        "netral. Estimasi terkoreksi bias — diturunkan dari matriks konfusi 10K — mendekati "
+        "rujukan LLM independen, bukti kuat bahwa distribusi korpus penuh yang mentah adalah "
+        "artefak, bukan temuan.",
+        "The raw model calls two-thirds of comments negative and nearly eliminates neutral. "
+        "The bias-corrected estimate — derived from the 10K confusion matrix — lands close "
+        "to the independent LLM reference, which is strong evidence the raw full-corpus "
+        "distribution is an artifact, not a finding."),
+    "se.calibration": ("Kalibrasi: mengoreksi kemiringan negatif model",
+                       "Calibration: correcting the model's negative skew"),
+    "se.agreement": ("Kesepakatan vs. rujukan LLM", "Agreement vs. LLM reference"),
+    "se.kappa": ("Cohen's kappa", "Cohen's kappa"),
+    "se.disagreements": ("Ketidaksepakatan", "Disagreements"),
+    "se.agreement_conf": ("Kesepakatan vs. LLM", "Agreement vs. LLM"),
+    "se.confusion": ("Matriks konfusi", "Confusion matrix"),
+    "se.transition": (
+        "**Perilaku transisi model** (baris = rujukan LLM, kolom = model): ketika rubrik "
+        "bilang *netral*, model mempertahankan netral hanya **{pct}** dan sisanya dilabeli "
+        "negatif. Inilah mekanisme di balik melonjaknya porsi negatif.",
+        "**Model transition behavior** (rows = LLM reference, columns = model): when the "
+        "rubric says *neutral*, the model keeps neutral only **{pct}** of the time and "
+        "otherwise relabels it negative. This is the mechanism behind the inflated negative "
+        "share."),
+    "se.agree_conf_caption": ("Kesepakatan hampir tidak membaik seiring keyakinan — tanda "
+                              "model yakin tetapi salah.",
+                              "Agreement barely improves with confidence — a sign the model "
+                              "is confidently wrong."),
+    "se.interpretation": (
+        "Interpretasi: rujukan LLM adalah sampel rubrik 10K, bukan kebenaran mutlak, jadi "
+        "angka-angka ini mengukur kesepakatan antara dua pelabel, bukan akurasi sejati "
+        "model. Gunakan porsi terkoreksi bias untuk klaim tentang korpus.",
+        "Interpretation: the LLM reference is a 10K rubric sample, not absolute truth, so "
+        "these figures measure agreement between two labelers, not the model's true "
+        "accuracy. Use the bias-corrected shares for any claim about the corpus."),
+    "se.slices": ("Sentimen korpus penuh per flair dan waktu",
+                  "Full-corpus sentiment by flair and time"),
+    "se.slices_caption": (
+        "Label model di seluruh 678.522 komentar, dipecah per flair thread dan bulan. "
+        "Potongan ini mewarisi kemiringan negatif model; baca bentuk dan perbedaan relatif, "
+        "bukan tingkat absolutnya.",
+        "Model labels across all 678,522 comments, broken down by thread flair and month. "
+        "Slices inherit the model's negative skew; read shapes and relative differences, "
+        "not absolute levels."),
+    "se.view_mode": ("Mode distribusi", "Distribution mode"),
+    "se.raw": ("Label model mentah", "Raw model labels"),
+    "se.corrected": ("Koreksi bias", "Bias-corrected"),
+    "se.corrected_caption": ("Porsi terkoreksi bias bisa berisik untuk flair kecil; "
+                             "tafsirkan flair bervolume rendah dengan hati-hati.",
+                             "Bias-corrected shares can be noisy for small flairs; treat "
+                             "low-volume flairs cautiously."),
+    "se.flairs_over_time": ("Flair yang dibandingkan sepanjang waktu",
+                            "Flairs to compare over time"),
+    "se.disagreement_title": ("Di mana model dan rubrik berbeda",
+                              "Where the model and the rubric disagree"),
+    "se.compared": ("Komentar yang dibandingkan", "Compared comments"),
+    "se.agree": ("Setuju", "Agree"),
+    "se.disagree": ("Beda", "Disagree"),
+    "se.only_dis": ("Tampilkan hanya yang berbeda", "Show disagreements only"),
+    "se.filter_flair": ("Saring per flair", "Filter by flair"),
+    "se.search_comment": ("Cari teks komentar", "Search comment text"),
+    "se.disagreement_hint": (
+        "Ketidaksepakatan berkeyakinan tinggi di bagian atas paling informatif: model yakin "
+        "dan rubrik tidak setuju. Baris-baris ini adalah daftar audit yang praktis.",
+        "High-confidence disagreements at the top are the most informative: the model is "
+        "sure and the rubric disagrees. These rows are a practical audit list."),
+    "se.build_hint": ("Jalankan `python src/build_sentiment_cache.py` untuk mengaktifkan "
+                      "penjelajah ketidaksepakatan.",
+                      "Run `python src/build_sentiment_cache.py` to enable the disagreement "
+                      "explorer."),
+    "se.gold_title": ("Pengecekan eksternal kecil: benchmark emas 40 komentar",
+                      "Small external check: 40-comment gold benchmark"),
+    "se.gold_rows": ("Baris emas yang cocok", "Gold rows matched"),
+    "se.gold_hc": ("Kesepakatan, keyakinan ≥0.8", "Agreement, conf ≥0.8"),
+    "se.gold_agreement": ("Kesepakatan", "Agreement"),
+    "se.gold_mean_conf": ("Rata-rata keyakinan", "Mean confidence"),
+    "se.gold_caption": (
+        "Hanya 40 baris dan diambil dari rubrik LLM yang sama, jadi ini hanya cek "
+        "kewajaran, bukan validasi independen. Hasilnya sejalan dengan temuan 10K: "
+        "model percaya diri dan condong negatif.",
+        "Only 40 rows and drawn from the same LLM rubric, so it is a sanity check, not "
+        "independent validation. It agrees with the 10K finding: the model is confident "
+        "and skewed negative."),
+    "se.sample_title": ("Periksa komentar berlabel", "Inspect labeled comments"),
+    "se.dataset": ("Dataset", "Dataset"),
+    "se.opt_llm": ("Rujukan LLM (10K)", "LLM reference (10K)"),
+    "se.opt_hf": ("Model (sampel 10K)", "Model (10K sample)"),
+    "se.search_llm": ("Cari teks berlabel LLM", "Search LLM-labeled text"),
+    "se.search_hf": ("Cari teks berlabel model", "Search model-labeled text"),
+    "se.no_10k": ("Tidak ada sampel model 10K.", "No 10K model sample available."),
+    "lbl.comment_id": ("ID komentar", "Comment ID"),
+    "se.missing": ("Artefak sentimen tidak ditemukan. Jalankan "
+                   "`python src/build_sentiment_cache.py` setelah keluaran model korpus "
+                   "penuh berada di root workspace.",
+                   "Sentiment artifacts are missing. Run "
+                   "`python src/build_sentiment_cache.py` after the full-corpus model "
+                   "output is in the workspace root."),
+    # ----------------------------------------------------------- misc messages
+    "msg.no_cache_title": ("📊 Analitik r/indonesia", "📊 r/indonesia Analytics"),
+    "msg.no_cache": ("Cache tidak ditemukan. Bangun sekali dari CSV mentah (± 1–2 menit).",
+                     "Cache not found. Build it once from the raw CSVs (takes ~1–2 minutes)."),
+    "msg.no_cache_expected": ("Lokasi yang diharapkan: `{path}`", "Expected location: `{path}`"),
+    "msg.build_now": ("🔨 Bangun cache sekarang", "🔨 Build cache now"),
+    "msg.building": ("Membangun cache… ini bisa memakan beberapa menit.",
+                     "Building cache… this can take a couple of minutes."),
+    "msg.built": ("Cache selesai dibangun. Memuat ulang…", "Cache built. Reloading…"),
+    "msg.build_failed": ("Pembangunan cache gagal.", "Build failed."),
+    "msg.no_threads": ("Tidak ada thread yang cocok dengan filter saat ini.",
+                       "No threads match the current filters."),
+    "msg.no_comments": ("Tidak ada komentar untuk filter thread saat ini.",
+                        "No comments for the current thread filters."),
+    "msg.no_data": ("Tidak ada data untuk filter saat ini.", "No data for the current filters."),
+    "msg.no_filter_hits": ("Tidak ada data untuk filter saat ini",
+                           "No data for the current filters"),
+    "ft.built": ("Cache dibangun {at} • thread: {th} • komentar: {cm} • Dibuat oleh "
+                 "`src/build_cache.py` — jalankan ulang setelah CSV berubah.",
+                 "Cache built {at} • threads: {th} • comments: {cm} • Built by "
+                 "`src/build_cache.py` — re-run it after the CSVs change."),
+}
+
 # The stylesheet is a Template so the palette lives in exactly one place.
 CSS_TEMPLATE = Template(r"""
 <style>
@@ -402,29 +849,36 @@ def date_bounds(df: pd.DataFrame, col: str) -> tuple[pd.Timestamp, pd.Timestamp]
 
 
 def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame) -> dict:
-    st.sidebar.title("🔎 Filters")
-    st.sidebar.caption("Every change re-filters the data and refreshes all charts.")
+    st.sidebar.title(t("sb.filters"))
+    st.sidebar.caption(t("sb.filters_help"))
 
     # ---- time range (driven by threads, the primary calendar) ----
-    st.sidebar.subheader("Time range")
+    # Preset ids stay stable across languages so switching never resets the
+    # selection; only the displayed label is translated.
+    QUICK_RANGES = {
+        "all": "sb.all_time", "d7": "sb.last7", "d30": "sb.last30",
+        "d90": "sb.last90", "custom": "sb.custom",
+    }
+    st.sidebar.subheader(t("sb.time_range"))
     bounds = date_bounds(th, "created_wib")
     if bounds:
         lo, hi = bounds
-        st.sidebar.caption(f"Data spans {fmt_date(lo)} → {fmt_date(hi)}")
+        st.sidebar.caption(t("sb.spans").format(span=f"{fmt_date(lo)} → {fmt_date(hi)}"))
         preset = st.sidebar.selectbox(
-            "Quick range",
-            ["All time", "Last 7 days", "Last 30 days", "Last 90 days", "Custom"],
+            t("sb.quick_range"),
+            options=list(QUICK_RANGES),
+            format_func=lambda k: t(QUICK_RANGES[k]),
             index=0,
         )
-        spans = {"Last 7 days": 7, "Last 30 days": 30, "Last 90 days": 90}
+        spans = {"d7": 7, "d30": 30, "d90": 90}
         if preset in spans:
             start = max(lo, hi - pd.Timedelta(days=spans[preset]))
             end = hi
-        elif preset == "All time":
+        elif preset == "all":
             start, end = lo, hi
         else:
             picked = st.sidebar.date_input(
-                "Custom range", value=(lo.date(), hi.date()),
+                t("sb.custom_range"), value=(lo.date(), hi.date()),
                 min_value=lo.date(), max_value=hi.date(),
             )
             if isinstance(picked, (tuple, list)) and len(picked) == 2:
@@ -439,56 +893,58 @@ def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame) -> dict:
     st.sidebar.divider()
 
     # ---- flair ----
-    st.sidebar.subheader("Flair")
+    st.sidebar.subheader(t("sb.flair"))
     flairs = sorted(th["link_flair_text"].dropna().unique().tolist()) if not th.empty else []
     counts = th["link_flair_text"].value_counts() if not th.empty else pd.Series(dtype=int)
     default_flairs = [f for f in flairs if counts.get(f, 0) >= 20] or flairs
     sel_flairs = st.sidebar.multiselect(
-        "Topics", options=flairs, default=default_flairs,
-        help="All flairs are selected by default except very rare ones (<20 threads).",
+        t("sb.topics"), options=flairs, default=default_flairs,
+        help=t("sb.topics_help"),
     )
     if not sel_flairs:
         sel_flairs = flairs
 
     # ---- author / text ----
-    st.sidebar.subheader("Search")
-    author_q = st.sidebar.text_input("Author UUID contains", "").strip()
-    text_q = st.sidebar.text_input("Title contains", "").strip()
+    st.sidebar.subheader(t("sb.search"))
+    author_q = st.sidebar.text_input(t("sb.author_q"), "").strip()
+    text_q = st.sidebar.text_input(t("sb.title_q"), "").strip()
 
     # ---- thresholds ----
-    st.sidebar.subheader("Thresholds")
+    st.sidebar.subheader(t("sb.thresholds"))
     if not th.empty:
         smin, smax = int(th["score"].min()), int(th["score"].max())
         score_rng = st.sidebar.slider(
-            "Thread score", min_value=smin, max_value=smax,
+            t("sb.thread_score"), min_value=smin, max_value=smax,
             value=(smin, min(smax, int(th["score"].quantile(0.99)))),
         )
     else:
         score_rng = (0, 0)
 
     # ---- flags ----
-    st.sidebar.subheader("Flags")
+    st.sidebar.subheader(t("sb.flags"))
     c1, c2 = st.sidebar.columns(2)
-    f_nsfw = c1.checkbox("Include NSFW", value=True)
-    f_locked = c2.checkbox("Include locked", value=True)
-    f_mod = c1.checkbox("Include mod posts", value=True)
-    f_stick = c2.checkbox("Include stickied", value=True)
-    f_spoil = c1.checkbox("Include spoilers", value=True)
-    f_edited = c2.checkbox("Include edited", value=True)
+    f_nsfw = c1.checkbox(t("sb.inc_nsfw"), value=True)
+    f_locked = c2.checkbox(t("sb.inc_locked"), value=True)
+    f_mod = c1.checkbox(t("sb.inc_mod"), value=True)
+    f_stick = c2.checkbox(t("sb.inc_stick"), value=True)
+    f_spoil = c1.checkbox(t("sb.inc_spoil"), value=True)
+    f_edited = c2.checkbox(t("sb.inc_edited"), value=True)
 
-    st.sidebar.subheader("Content")
+    st.sidebar.subheader(t("sb.content"))
     f_exclude_auto = st.sidebar.checkbox(
-        "Exclude auto-posted threads", value=False,
-        help="Daily Chat, Weekend Chat and Special Threads — posted by automod on a "
-             "fixed schedule. Only ~2% of threads but ~22% of all comments, so they "
-             "skew averages and any timing analysis.",
+        t("sb.exclude_auto"), value=False,
+        help=t("sb.exclude_auto_help"),
     )
 
-    post_type = st.sidebar.radio("Post type", ["All", "Text", "Link"], horizontal=True)
+    post_type = st.sidebar.radio(
+        t("sb.post_type"), options=["All", "Text", "Link"],
+        format_func=lambda v: {"All": t("sb.all"), "Text": t("sb.text"), "Link": t("sb.link")}[v],
+        horizontal=True,
+    )
 
     min_comments = st.sidebar.number_input(
-        "Minimum comments (actual)", min_value=0, value=0, step=5,
-        help="Uses total_comments_actual — the true joined count, not Reddit's stale counter.",
+        t("sb.min_comments"), min_value=0, value=0, step=5,
+        help=t("sb.min_comments_help"),
     )
 
     return {
@@ -554,7 +1010,7 @@ def apply_filters(th: pd.DataFrame, f: dict) -> pd.DataFrame:
 
 
 def page_overview(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
-    st.header("Overview")
+    st.header(t("ov.title"))
 
     threads = len(th)
     comments = len(cm)
@@ -562,25 +1018,24 @@ def page_overview(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
     authors = th["author"].nunique()
 
     c = st.columns(5)
-    c[0].metric("Threads", fmt_int(threads))
-    c[1].metric("Comments", fmt_int(comments))
-    c[2].metric("Contributors", fmt_int(authors))
-    c[3].metric("Total score", fmt_compact(th["score"].sum()))
-    c[4].metric("Avg score", f"{th['score'].mean():.1f}" if threads else "-")
+    c[0].metric(t("lbl.threads"), fmt_int(threads))
+    c[1].metric(t("ov.comments"), fmt_int(comments))
+    c[2].metric(t("ov.contributors"), fmt_int(authors))
+    c[3].metric(t("ov.total_score"), fmt_compact(th["score"].sum()))
+    c[4].metric(t("ov.avg_score"), f"{th['score'].mean():.1f}" if threads else "-")
 
-    st.caption(
-        f"Comments shown are those belonging to the {fmt_int(threads)} filtered threads. "
-        f"Actual comment total across them: **{fmt_int(total_actual)}**."
-    )
+    st.caption(t("ov.caption").format(n=fmt_int(threads), a=fmt_int(total_actual)))
 
     if th.empty:
-        st.plotly_chart(empty_fig(), use_container_width=True, key="ov_empty")
+        st.plotly_chart(empty_fig(t("msg.no_filter_hits")), use_container_width=True, key="ov_empty")
         return
 
     # ---- activity over time ----
-    st.subheader("Activity over time (WIB)")
+    st.subheader(t("ov.activity"))
     granularity = st.radio(
-        "Bucket", ["Daily", "Weekly", "Monthly"], horizontal=True, key="ov_gran"
+        t("ov.bucket"), ["Daily", "Weekly", "Monthly"], horizontal=True, key="ov_gran",
+        format_func=lambda v: {"Daily": t("ov.daily"), "Weekly": t("ov.weekly"),
+                               "Monthly": t("ov.monthly")}[v],
     )
     freq = {"Daily": "D", "Weekly": "W", "Monthly": "MS"}[granularity]
 
@@ -592,14 +1047,15 @@ def page_overview(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
     )
     ts = ts[ts["threads"] > 0]
 
-    fig = px.bar(ts, x="created_wib", y="threads", labels={"threads": "Threads", "created_wib": ""})
+    fig = px.bar(ts, x="created_wib", y="threads",
+                 labels={"threads": t("lbl.threads"), "created_wib": ""})
     fig.update_traces(marker_color=EINK["ink"])
     st.plotly_chart(style(fig, 330), use_container_width=True, key="ov_ts")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("Top flairs")
+        st.subheader(t("ov.top_flairs"))
         fl = (
             th.groupby("link_flair_text")
             .agg(threads=("thread_id", "count"), avg_score=("score", "mean"))
@@ -609,7 +1065,7 @@ def page_overview(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
         )
         fig = px.bar(
             fl.sort_values("threads"), x="threads", y="link_flair_text", orientation="h",
-            labels={"threads": "Threads", "link_flair_text": ""},
+            labels={"threads": t("lbl.threads"), "link_flair_text": ""},
             hover_data={"avg_score": ":.1f"},
             color="link_flair_text", color_discrete_map=flair_palette(),
         )
@@ -618,49 +1074,55 @@ def page_overview(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
         st.plotly_chart(style(fig, 430), use_container_width=True, key="ov_flair")
 
     with col2:
-        st.subheader("Score vs. comments")
+        st.subheader(t("ov.score_vs_comments"))
         samp = th.sample(min(len(th), 3000), random_state=0) if len(th) > 3000 else th
         fig = px.scatter(
             samp, x="score", y="total_comments_actual", color="link_flair_text",
-            opacity=0.6, labels={"score": "Thread score", "total_comments_actual": "Comments (actual)",
-                                 "link_flair_text": "Flair"},
+            opacity=0.6, labels={"score": t("lbl.thread_score"),
+                                 "total_comments_actual": t("lbl.comments_actual"),
+                                 "link_flair_text": t("lbl.flair")},
             color_discrete_map=flair_palette(),
         )
         fig.update_traces(marker=dict(size=6))
         st.plotly_chart(style(fig, 430), use_container_width=True, key="ov_scatter")
 
-    st.subheader("Distribution of thread scores")
+    st.subheader(t("ov.score_dist"))
     pos = th[th["score"] >= 0]["score"]
-    fig = px.histogram(pos, nbins=60, labels={"value": "Score", "count": "Threads"})
+    fig = px.histogram(pos, nbins=60,
+                       labels={"value": t("lbl.score"), "count": t("lbl.threads")})
     fig.update_traces(marker_color="#545454")
-    fig.update_layout(showlegend=False, yaxis_title="Threads", xaxis_title="Score")
+    fig.update_layout(showlegend=False, yaxis_title=t("lbl.threads"), xaxis_title=t("lbl.score"))
     st.plotly_chart(style(fig, 300), use_container_width=True, key="ov_hist")
 
 
 def page_threads(th: pd.DataFrame) -> None:
-    st.header("Threads")
+    st.header(t("th.title"))
     if th.empty:
-        st.info("No threads match the current filters.")
+        st.info(t("msg.no_threads"))
         return
 
     c = st.columns(4)
-    c[0].metric("Threads", fmt_int(len(th)))
-    c[1].metric("Median score", f"{th['score'].median():.0f}")
-    c[2].metric("Median comments", f"{th['total_comments_actual'].median():.0f}")
-    c[3].metric("Text / Link", f"{int((th['post_type'] == 'Text').sum())} / {int((th['post_type'] == 'Link').sum())}")
+    c[0].metric(t("lbl.threads"), fmt_int(len(th)))
+    c[1].metric(t("th.median_score"), f"{th['score'].median():.0f}")
+    c[2].metric(t("th.median_comments"), f"{th['total_comments_actual'].median():.0f}")
+    c[3].metric(
+        t("th.text_link"),
+        f"{int((th['post_type'] == 'Text').sum())} / {int((th['post_type'] == 'Link').sum())}",
+    )
 
-    tab1, tab2, tab3 = st.tabs(["Top threads", "Browse / search", "Flair detail"])
+    tab1, tab2, tab3 = st.tabs([t("th.tab_top"), t("th.tab_browse"), t("th.tab_detail")])
 
     with tab1:
         metric = st.selectbox(
-            "Rank by", ["score", "total_comments_actual", "upvote_ratio", "average_comment_score"],
+            t("th.rank_by"),
+            ["score", "total_comments_actual", "upvote_ratio", "average_comment_score"],
             format_func=lambda x: {
-                "score": "Score", "total_comments_actual": "Comments (actual)",
-                "upvote_ratio": "Upvote ratio", "average_comment_score": "Avg comment score",
+                "score": t("th.opt_score"), "total_comments_actual": t("th.opt_comments"),
+                "upvote_ratio": t("th.opt_ratio"), "average_comment_score": t("th.opt_avgcs"),
             }[x],
             key="th_rank",
         )
-        n = st.slider("Show top N", 10, 100, 25, step=5, key="th_n")
+        n = st.slider(t("th.show_top_n"), 10, 100, 25, step=5, key="th_n")
         top = th.nlargest(n, metric)[
             ["title", "link_flair_text", "score", "total_comments_actual",
              "upvote_ratio", "created_wib", "author"]
@@ -668,16 +1130,17 @@ def page_threads(th: pd.DataFrame) -> None:
         top["created_wib"] = top["created_wib"].dt.strftime("%Y-%m-%d %H:%M")
         st.dataframe(
             top.rename(columns={
-                "title": "Title", "link_flair_text": "Flair", "score": "Score",
-                "total_comments_actual": "Comments", "upvote_ratio": "Ratio",
-                "created_wib": "Created (WIB)", "author": "Author",
+                "title": t("lbl.title"), "link_flair_text": t("lbl.flair"),
+                "score": t("lbl.score"), "total_comments_actual": t("lbl.comments"),
+                "upvote_ratio": t("lbl.ratio"), "created_wib": t("lbl.created"),
+                "author": t("lbl.author"),
             }),
             use_container_width=True, hide_index=True, height=460,
         )
 
     with tab2:
-        st.caption("Search within the currently filtered thread set.")
-        q = st.text_input("Search title or body text", "", key="th_q")
+        st.caption(t("th.search_caption"))
+        q = st.text_input(t("th.search_input"), "", key="th_q")
         view = th
         if q:
             mask = (
@@ -685,7 +1148,7 @@ def page_threads(th: pd.DataFrame) -> None:
                 | th["selftext"].str.contains(q, case=False, na=False, regex=False)
             )
             view = th[mask]
-            st.caption(f"{fmt_int(len(view))} matching threads")
+            st.caption(t("th.matching").format(n=fmt_int(len(view))))
         show = view.sort_values("created_wib", ascending=False)[
             ["created_wib", "title", "link_flair_text", "score", "total_comments_actual",
              "upvote_ratio", "was_edited", "locked"]
@@ -693,20 +1156,21 @@ def page_threads(th: pd.DataFrame) -> None:
         show["created_wib"] = show["created_wib"].dt.strftime("%Y-%m-%d %H:%M")
         st.dataframe(
             show.rename(columns={
-                "created_wib": "Created (WIB)", "title": "Title", "link_flair_text": "Flair",
-                "score": "Score", "total_comments_actual": "Comments",
-                "upvote_ratio": "Ratio", "was_edited": "Edited", "locked": "Locked",
+                "created_wib": t("lbl.created"), "title": t("lbl.title"),
+                "link_flair_text": t("lbl.flair"), "score": t("lbl.score"),
+                "total_comments_actual": t("lbl.comments"), "upvote_ratio": t("lbl.ratio"),
+                "was_edited": t("lbl.edited"), "locked": t("lbl.locked"),
             }),
             use_container_width=True, hide_index=True, height=460,
         )
         st.download_button(
-            "⬇ Download filtered threads (CSV)",
+            t("th.download"),
             view.drop(columns=[c for c in ["selftext"] if c in view]).to_csv(index=False).encode("utf-8"),
             file_name="filtered_threads.csv", mime="text/csv",
         )
 
     with tab3:
-        st.subheader("Flair comparison")
+        st.subheader(t("th.flair_comparison"))
         g = (
             th.groupby("link_flair_text")
             .agg(
@@ -722,17 +1186,19 @@ def page_threads(th: pd.DataFrame) -> None:
         )
         g = g[g["threads"] >= 3]
 
+        metric_labels = {
+            "avg_score": t("th.opt_avg_score"), "avg_comments": t("th.opt_avg_comments"),
+            "avg_ratio": t("th.opt_avg_ratio"), "total_score": t("th.opt_total_score"),
+            "threads": t("th.opt_threads"),
+        }
         m = st.selectbox(
-            "Metric", ["avg_score", "avg_comments", "avg_ratio", "total_score", "threads"],
-            format_func=lambda x: {
-                "avg_score": "Average score", "avg_comments": "Average comments",
-                "avg_ratio": "Average upvote ratio", "total_score": "Total score",
-                "threads": "Thread count",
-            }[x], key="th_flair_metric",
+            t("lbl.metric"),
+            ["avg_score", "avg_comments", "avg_ratio", "total_score", "threads"],
+            format_func=lambda x: metric_labels[x], key="th_flair_metric",
         )
         fig = px.bar(
             g.sort_values(m), x=m, y="link_flair_text", orientation="h",
-            labels={m: m.replace("_", " ").title(), "link_flair_text": ""},
+            labels={m: metric_labels[m], "link_flair_text": ""},
             hover_data={"threads": True, "avg_score": ":.1f", "avg_comments": ":.1f"},
         )
         fig.update_traces(marker_color="#A4A4A4")
@@ -743,70 +1209,79 @@ def page_threads(th: pd.DataFrame) -> None:
             disp[c_] = disp[c_].round(2)
         st.dataframe(
             disp.rename(columns={
-                "link_flair_text": "Flair", "threads": "Threads", "avg_score": "Avg score",
-                "med_score": "Median score", "avg_comments": "Avg comments",
-                "avg_ratio": "Avg ratio", "total_score": "Total score",
+                "link_flair_text": t("lbl.flair"), "threads": t("lbl.threads"),
+                "avg_score": t("lbl.avg_score"), "med_score": t("lbl.med_score"),
+                "avg_comments": t("lbl.avg_comments"), "avg_ratio": t("lbl.avg_ratio"),
+                "total_score": t("lbl.total_score"),
             }),
             use_container_width=True, hide_index=True,
         )
 
 
 def page_comments(th: pd.DataFrame, cm: pd.DataFrame, cm_text: pd.DataFrame, f: dict) -> None:
-    st.header("Comments")
+    st.header(t("cm.title"))
 
     if cm.empty:
-        st.info("No comments for the current thread filters.")
+        st.info(t("msg.no_comments"))
         return
 
     c = st.columns(4)
-    c[0].metric("Comments", fmt_int(len(cm)))
-    c[1].metric("Commenters", fmt_int(cm["author"].nunique()))
-    c[2].metric("Median score", f"{cm['score'].median():.0f}")
-    c[3].metric("Avg length", f"{cm['body_len'].mean():.0f} chars")
+    c[0].metric(t("lbl.comments"), fmt_int(len(cm)))
+    c[1].metric(t("cm.commenters"), fmt_int(cm["author"].nunique()))
+    c[2].metric(t("cm.median_score"), f"{cm['score'].median():.0f}")
+    c[3].metric(t("cm.avg_length"), t("cm.chars").format(n=f"{cm['body_len'].mean():.0f}"))
 
-    st.caption("Comment scores reach back to the raw comments file (728K rows), "
-               "so these stats recompute live with your filters.")
+    st.caption(t("cm.caption"))
 
-    tab1, tab2, tab3 = st.tabs(["Activity", "Top & bottom comments", "Text length"])
+    tab1, tab2, tab3 = st.tabs([t("cm.tab_activity"), t("cm.tab_top"), t("cm.tab_len")])
 
     with tab1:
-        st.subheader("Comment volume over time (WIB)")
-        freq = st.radio("Bucket", ["Daily", "Weekly", "Monthly"], horizontal=True, key="cm_gran")
+        st.subheader(t("cm.volume"))
+        freq = st.radio(
+            t("cm.bucket"), ["Daily", "Weekly", "Monthly"], horizontal=True, key="cm_gran",
+            format_func=lambda v: {"Daily": t("ov.daily"), "Weekly": t("ov.weekly"),
+                                   "Monthly": t("ov.monthly")}[v],
+        )
         fr = {"Daily": "D", "Weekly": "W", "Monthly": "MS"}[freq]
         ts = cm.set_index("created_wib").resample(fr).agg(
             comments=("comment_id", "count"), avg_score=("score", "mean")
         ).reset_index()
         ts = ts[ts["comments"] > 0]
-        fig = px.bar(ts, x="created_wib", y="comments", labels={"comments": "Comments", "created_wib": ""})
+        fig = px.bar(ts, x="created_wib", y="comments",
+                     labels={"comments": t("lbl.comments"), "created_wib": ""})
         fig.update_traces(marker_color=EINK["ink"])
         st.plotly_chart(style(fig, 320), use_container_width=True, key="cm_ts")
 
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("Score distribution")
+            st.subheader(t("cm.score_dist"))
             lo, hi = cm["score"].quantile([0.01, 0.99])
             clipped = cm["score"].clip(lo, hi)
-            fig = px.histogram(clipped, nbins=60, labels={"value": "Comment score", "count": "Comments"})
+            fig = px.histogram(clipped, nbins=60,
+                               labels={"value": t("cm.score_axis"), "count": t("lbl.comments")})
             fig.update_traces(marker_color="#545454")
-            fig.update_layout(showlegend=False, yaxis_title="Comments", xaxis_title="Score")
+            fig.update_layout(showlegend=False, yaxis_title=t("lbl.comments"),
+                              xaxis_title=t("lbl.score"))
             st.plotly_chart(style(fig, 320), use_container_width=True, key="cm_hist")
         with col2:
-            st.subheader("Comments per thread")
+            st.subheader(t("cm.per_thread"))
             per = th["total_comments_actual"]
             per = per[per > 0]
-            fig = px.histogram(per, nbins=50, labels={"value": "Comments per thread", "count": "Threads"})
+            fig = px.histogram(per, nbins=50,
+                               labels={"value": t("cm.per_thread"), "count": t("lbl.threads")})
             fig.update_traces(marker_color="#7C7C7C")
-            fig.update_layout(showlegend=False, yaxis_title="Threads", xaxis_title="Comments per thread")
+            fig.update_layout(showlegend=False, yaxis_title=t("lbl.threads"),
+                              xaxis_title=t("cm.per_thread"))
             st.plotly_chart(style(fig, 320), use_container_width=True, key="cm_per")
 
     with tab2:
-        st.subheader("Top comment threads")
-        st.caption("Comments are matched to your filtered threads by `thread_id`.")
+        st.subheader(t("cm.top_threads"))
+        st.caption(t("cm.top_caption"))
         tmap = th.set_index("thread_id")["title"].to_dict()
         work = cm.copy()
         if len(work) > 200_000:
             work = work.sample(200_000, random_state=0)
-            st.caption("Sampling 200K comments for responsiveness on this view.")
+            st.caption(t("cm.sampling"))
 
         joinable = cm_text if not cm_text.empty else pd.DataFrame(columns=["comment_id", "body"])
         merged = work.merge(joinable, on="comment_id", how="left")
@@ -814,53 +1289,56 @@ def page_comments(th: pd.DataFrame, cm: pd.DataFrame, cm_text: pd.DataFrame, f: 
 
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("**Highest-scored**")
+            st.markdown(t("cm.highest"))
             up = merged.nlargest(15, "score")[["score", "body", "thread_title"]]
             up["body"] = up["body"].fillna("").astype(str).str.slice(0, 160)
             st.dataframe(
-                up.rename(columns={"score": "Score", "body": "Comment", "thread_title": "Thread"}),
+                up.rename(columns={"score": t("lbl.score"), "body": t("lbl.comment"),
+                                   "thread_title": t("lbl.thread")}),
                 use_container_width=True, hide_index=True, height=380,
             )
         with col2:
-            st.markdown("**Lowest-scored**")
+            st.markdown(t("cm.lowest"))
             dn = merged.nsmallest(15, "score")[["score", "body", "thread_title"]]
             dn["body"] = dn["body"].fillna("").astype(str).str.slice(0, 160)
             st.dataframe(
-                dn.rename(columns={"score": "Score", "body": "Comment", "thread_title": "Thread"}),
+                dn.rename(columns={"score": t("lbl.score"), "body": t("lbl.comment"),
+                                   "thread_title": t("lbl.thread")}),
                 use_container_width=True, hide_index=True, height=380,
             )
 
     with tab3:
-        st.subheader("Comment length distribution")
+        st.subheader(t("cm.len_dist"))
         lw = pd.DataFrame({
             "chars": cm["body_len"], "words": cm["word_count"],
         })
-        fig = px.histogram(lw, x="words", nbins=60, labels={"words": "Words per comment", "count": "Comments"})
+        fig = px.histogram(lw, x="words", nbins=60,
+                           labels={"words": t("cm.words_per_comment"), "count": t("lbl.comments")})
         fig.update_traces(marker_color="#A4A4A4")
-        fig.update_layout(showlegend=False, yaxis_title="Comments")
+        fig.update_layout(showlegend=False, yaxis_title=t("lbl.comments"))
         st.plotly_chart(style(fig, 320), use_container_width=True, key="cm_len")
 
         c1, c2 = st.columns(2)
-        c1.metric("Median words", f"{cm['word_count'].median():.0f}")
-        c2.metric("Median characters", f"{cm['body_len'].median():.0f}")
+        c1.metric(t("cm.median_words"), f"{cm['word_count'].median():.0f}")
+        c2.metric(t("cm.median_chars"), f"{cm['body_len'].median():.0f}")
 
-        st.markdown("**Longest comments in the filtered set**")
+        st.markdown(t("cm.longest"))
         long_ct = cm.nlargest(15, "word_count")[["word_count", "score", "body_len"]]
         st.dataframe(
-            long_ct.rename(columns={"word_count": "Words", "score": "Score", "body_len": "Chars"}),
+            long_ct.rename(columns={"word_count": t("lbl.words"), "score": t("lbl.score"),
+                                    "body_len": t("lbl.chars")}),
             use_container_width=True, hide_index=True,
         )
 
 
 def page_authors(th: pd.DataFrame, cm: pd.DataFrame) -> None:
-    st.header("Authors")
+    st.header(t("au.title"))
 
     if th.empty and cm.empty:
-        st.info("No data for the current filters.")
+        st.info(t("msg.no_data"))
         return
 
-    st.caption("Leaderboard file is a static snapshot and ignores filters. "
-               "The live table below is recomputed from your selections.")
+    st.caption(t("au.caption"))
 
     live = th.groupby("author").agg(
         threads=("thread_id", "count"),
@@ -876,20 +1354,28 @@ def page_authors(th: pd.DataFrame, cm: pd.DataFrame) -> None:
     combined["total_engagement"] = combined["thread_score"] + combined["comment_score"]
     combined = combined.reset_index().rename(columns={"index": "author"})
 
-    tab1, tab2 = st.tabs(["Live ranking", "Static leaderboard file"])
+    metric_labels = {
+        "total_engagement": t("au.opt_total_engagement"),
+        "thread_score": t("au.opt_thread_score"),
+        "comment_score": t("au.opt_comment_score"),
+        "threads": t("au.opt_threads"),
+        "comments": t("au.opt_comments"),
+    }
+
+    tab1, tab2 = st.tabs([t("au.tab_live"), t("au.tab_static")])
 
     with tab1:
         metric = st.selectbox(
-            "Rank authors by",
+            t("au.rank_by"),
             ["total_engagement", "thread_score", "comment_score", "threads", "comments"],
-            format_func=lambda x: x.replace("_", " ").title(), key="au_metric",
+            format_func=lambda x: metric_labels[x], key="au_metric",
         )
-        n = st.slider("Show top N", 5, 50, 20, key="au_n")
+        n = st.slider(t("au.show_top_n"), 5, 50, 20, key="au_n")
         top = combined.nlargest(n, metric)
 
         fig = px.bar(
             top.sort_values(metric), x=metric, y="author", orientation="h",
-            labels={metric: metric.replace("_", " ").title(), "author": ""},
+            labels={metric: metric_labels[metric], "author": ""},
         )
         fig.update_traces(marker_color=EINK["ink"])
         fig.update_yaxes(tickmode="linear")
@@ -899,7 +1385,7 @@ def page_authors(th: pd.DataFrame, cm: pd.DataFrame) -> None:
         fig = px.scatter(
             combined[combined[metric] > 0], x="threads", y="comments",
             size=combined[combined[metric] > 0]["total_engagement"].abs() + 1,
-            labels={"threads": "Threads created", "comments": "Comments written"},
+            labels={"threads": t("au.scatter_x"), "comments": t("au.scatter_y")},
             hover_name="author",
         )
         fig.update_traces(marker=dict(color="#545454", opacity=0.75))
@@ -910,15 +1396,18 @@ def page_authors(th: pd.DataFrame, cm: pd.DataFrame) -> None:
             disp[c_] = disp[c_].round(1)
         st.dataframe(
             disp.rename(columns={
-                "author": "Author", "threads": "Threads", "thread_score": "Thread score",
-                "avg_thread_score": "Avg thread score", "comments_received": "Comments received",
-                "comments": "Comments written", "comment_score": "Comment score",
-                "total_engagement": "Total engagement",
+                "author": t("lbl.author"), "threads": t("lbl.threads"),
+                "thread_score": t("lbl.thread_score"),
+                "avg_thread_score": t("lbl.avg_thread_score"),
+                "comments_received": t("lbl.comments_received"),
+                "comments": t("lbl.comments_written"),
+                "comment_score": t("lbl.comment_score"),
+                "total_engagement": t("lbl.total_engagement"),
             }),
             use_container_width=True, hide_index=True,
         )
         st.download_button(
-            "⬇ Download this ranking (CSV)",
+            t("au.download"),
             combined.sort_values(metric, ascending=False).to_csv(index=False).encode("utf-8"),
             file_name="live_author_ranking.csv", mime="text/csv",
         )
@@ -926,46 +1415,52 @@ def page_authors(th: pd.DataFrame, cm: pd.DataFrame) -> None:
     with tab2:
         lb = load("author_leaderboard")
         if lb.empty:
-            st.warning("author_leaderboard.parquet not found in cache.")
+            st.warning(t("au.missing"))
             return
-        st.info("Static snapshot from `author_leaderboard.csv` — shows the dataset's own "
-                "top authors, independent of filters.")
+        st.info(t("au.static_info"))
         top = lb.nlargest(20, "total_engagement_score")
         fig = px.bar(
             top.sort_values("total_engagement_score"), x="total_engagement_score", y="author",
-            orientation="h", labels={"total_engagement_score": "Total engagement", "author": ""},
+            orientation="h",
+            labels={"total_engagement_score": t("lbl.total_engagement"), "author": ""},
         )
         fig.update_traces(marker_color="#545454")
         st.plotly_chart(style(fig, 500), use_container_width=True, key="au_static")
 
         cm1, cm2 = st.columns(2)
-        cm1.metric("Top author threads", fmt_int(top.iloc[0]["threads_created"]))
-        cm2.metric("Top author comments", fmt_int(top.iloc[0]["comments_written"]))
+        cm1.metric(t("au.top_threads"), fmt_int(top.iloc[0]["threads_created"]))
+        cm2.metric(t("au.top_comments"), fmt_int(top.iloc[0]["comments_written"]))
+        lb_cols = {
+            "author": t("lbl.author"),
+            "threads_created": t("lbl.threads_created"),
+            "comments_written": t("lbl.comments_written"),
+            "total_engagement_score": t("lbl.total_engagement"),
+        }
         st.dataframe(
-            lb.head(50).rename(columns=lambda c: c.replace("_", " ").title()),
+            lb.head(50).rename(columns=lambda c_: lb_cols.get(c_, c_.replace("_", " ").title())),
             use_container_width=True, hide_index=True,
         )
 
 
 def page_flairs(th: pd.DataFrame) -> None:
-    st.header("Flairs")
+    st.header(t("fl.title"))
 
     if th.empty:
-        st.info("No threads for the current filters.")
+        st.info(t("msg.no_threads"))
         return
 
-    st.caption("Live view recomputed from your filtered threads.")
+    st.caption(t("fl.caption"))
 
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Threads per flair")
+        st.subheader(t("fl.threads_per_flair"))
         g = th["link_flair_text"].value_counts().reset_index()
         g.columns = ["flair", "threads"]
         pal = flair_palette()
         if len(g) > 10:  # keep the donut legible; bundle the long tail
             head = g.head(10).copy()
             other = pd.DataFrame([{
-                "flair": f"Other ({len(g) - 10} flairs)",
+                "flair": t("fl.other").format(n=len(g) - 10),
                 "threads": int(g["threads"].iloc[10:].sum()),
             }])
             g = pd.concat([head, other], ignore_index=True)
@@ -980,7 +1475,7 @@ def page_flairs(th: pd.DataFrame) -> None:
         st.plotly_chart(style(fig, 460), use_container_width=True, key="fl_pie")
 
     with col2:
-        st.subheader("Engagement profile by flair")
+        st.subheader(t("fl.engagement_profile"))
         profile = (
             th.groupby("link_flair_text")
             .agg(
@@ -995,12 +1490,13 @@ def page_flairs(th: pd.DataFrame) -> None:
         fig = px.scatter(
             profile, x="avg_comments", y="avg_score", size="threads",
             color="avg_ratio", hover_name="link_flair_text",
-            labels={"avg_comments": "Avg comments", "avg_score": "Avg score", "avg_ratio": "Avg ratio"},
+            labels={"avg_comments": t("lbl.avg_comments"), "avg_score": t("lbl.avg_score"),
+                    "avg_ratio": t("lbl.avg_ratio")},
             color_continuous_scale=EINK_SEQ_BLUE,
         )
         st.plotly_chart(style(fig, 460), use_container_width=True, key="fl_scatter")
 
-    st.subheader("Normalized metric heatmap")
+    st.subheader(t("fl.norm_heatmap"))
     profile = (
         th.groupby("link_flair_text")
         .agg(
@@ -1014,7 +1510,7 @@ def page_flairs(th: pd.DataFrame) -> None:
     )
     profile = profile[profile["threads"] >= 3].set_index("link_flair_text")
     if profile.empty:
-        st.info("Not enough threads per flair after filtering to build a heatmap.")
+        st.info(t("fl.not_enough"))
     else:
         metrics = ["threads", "avg_score", "avg_comments", "avg_ratio", "avg_comment_score"]
         norm = (profile[metrics] - profile[metrics].min()) / (
@@ -1022,20 +1518,20 @@ def page_flairs(th: pd.DataFrame) -> None:
         ).replace(0, 1)
         fig = px.imshow(
             norm.T, aspect="auto", color_continuous_scale=EINK_SEQ_BLUE,
-            labels=dict(x="Flair", y="Metric", color="Normalized"),
+            labels=dict(x=t("lbl.flair"), y=t("lbl.metric"), color=t("lbl.normalized")),
             text_auto=".2f",
         )
         fig.update_layout(height=max(320, 40 * len(metrics)))
         st.plotly_chart(style(fig, max(320, 40 * len(metrics))), use_container_width=True, key="fl_heat")
 
-    tab1, tab2 = st.tabs(["Top words per flair", "Reference flair performance"])
+    tab1, tab2 = st.tabs([t("fl.tab_words"), t("fl.tab_reference")])
     with tab1:
         fw = load("flair_top_words")
         if fw.empty:
-            st.warning("flair_top_words.parquet not found in cache.")
+            st.warning(t("fl.words_missing"))
         else:
             selected = st.multiselect(
-                "Compare flairs",
+                t("fl.compare_flairs"),
                 sorted(fw["flair"].unique()),
                 default=sorted(fw["flair"].unique())[:3],
                 key="fl_words_sel",
@@ -1048,96 +1544,101 @@ def page_flairs(th: pd.DataFrame) -> None:
                 combo = pd.concat(rows)
                 fig = px.bar(
                     combo, x="count", y="word", color="flair", orientation="h",
-                    barmode="group", labels={"count": "Occurrences", "word": "", "flair": "Flair"},
+                    barmode="group",
+                    labels={"count": t("lbl.occurrences"), "word": "", "flair": t("lbl.flair")},
                     color_discrete_map=flair_palette(),
                 )
                 st.plotly_chart(style(fig, max(400, 30 * len(selected) * 2)), use_container_width=True, key="fl_words")
             else:
-                st.info("Select at least one flair.")
+                st.info(t("fl.select_one"))
 
     with tab2:
         fp = load("flair_performance")
         if fp.empty:
-            st.warning("flair_performance.parquet not found in cache.")
+            st.warning(t("fl.perf_missing"))
         else:
-            st.info("Static snapshot from `flair_performance.csv`.")
+            st.info(t("fl.ref_info"))
             fp2 = fp.sort_values("thread_count", ascending=False)
             fig = px.bar(
                 fp2.head(20).sort_values("avg_score"), x="avg_score", y="link_flair_text",
-                orientation="h", labels={"avg_score": "Avg score", "link_flair_text": ""},
+                orientation="h",
+                labels={"avg_score": t("lbl.avg_score"), "link_flair_text": ""},
                 hover_data={"thread_count": True, "avg_comments_actual": ":.1f"},
                 color="link_flair_text", color_discrete_map=flair_palette(),
             )
             fig.update_traces(marker_line_color=EINK["ink_strong"], marker_line_width=1)
             fig.update_layout(showlegend=False)
             st.plotly_chart(style(fig, 520), use_container_width=True, key="fl_ref")
+            fp_cols = {
+                "link_flair_text": t("lbl.flair"),
+                "thread_count": t("lbl.thread_count"),
+                "avg_score": t("lbl.avg_score"),
+                "avg_comments_actual": t("lbl.avg_comments_actual"),
+            }
             st.dataframe(
-                fp2.rename(columns=lambda c: c.replace("_", " ").title()),
+                fp2.rename(columns=lambda c_: fp_cols.get(c_, c_.replace("_", " ").title())),
                 use_container_width=True, hide_index=True,
             )
 
 
 def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
-    st.header("Timing")
-    st.caption("All times converted to WIB (UTC+7). Live from filtered threads & comments.")
+    st.header(t("tm.title"))
+    st.caption(t("tm.caption"))
 
     if th.empty:
-        st.info("No threads for the current filters.")
+        st.info(t("tm.no_threads"))
         return
 
-    t = th.copy()
-    t["dow"] = t["created_wib"].dt.day_name()
-    t["hour"] = t["created_wib"].dt.hour
+    # NB: local name is `tt`, not `t` — `t()` is the translation helper.
+    tt = th.copy()
+    tt["dow"] = tt["created_wib"].dt.day_name()
+    tt["hour"] = tt["created_wib"].dt.hour
 
     c = cm.copy()
     if not c.empty:
         c["dow"] = c["created_wib"].dt.day_name()
         c["hour"] = c["created_wib"].dt.hour
 
-    st.subheader("Thread activity heatmap (day × hour, WIB)")
+    st.subheader(t("tm.thread_heat"))
     pivot = (
-        t.pivot_table(index="dow", columns="hour", values="thread_id", aggfunc="count")
+        tt.pivot_table(index="dow", columns="hour", values="thread_id", aggfunc="count")
         .reindex(DOW_ORDER).reindex(columns=range(24)).fillna(0)
     )
     fig = px.imshow(
         pivot, aspect="auto", color_continuous_scale=EINK_SEQ_BLUE,
-        labels=dict(x="Hour (WIB)", y="", color="Threads"),
+        labels=dict(x=t("lbl.hour"), y="", color=t("lbl.threads")),
     )
     fig.update_xaxes(dtick=2)
     st.plotly_chart(style(fig, 380), use_container_width=True, key="tm_heat_t")
 
     if not c.empty:
-        st.subheader("Comment activity heatmap (day × hour, WIB)")
+        st.subheader(t("tm.comment_heat"))
         cp = (
             c.pivot_table(index="dow", columns="hour", values="comment_id", aggfunc="count")
             .reindex(DOW_ORDER).reindex(columns=range(24)).fillna(0)
         )
         fig = px.imshow(
             cp, aspect="auto", color_continuous_scale=EINK_SEQ_EMBER,
-            labels=dict(x="Hour (WIB)", y="", color="Comments"),
+            labels=dict(x=t("lbl.hour"), y="", color=t("lbl.comments")),
         )
         fig.update_xaxes(dtick=2)
         st.plotly_chart(style(fig, 380), use_container_width=True, key="tm_heat_c")
-        st.caption(
-            "Comments ride along with their parent thread, so they are *not* date-filtered "
-            "individually — a thread inside the window can still contribute comments posted "
-            "after it. Hour 07:00 dominates because automod posts the Daily/Weekend Chat "
-            "Threads then."
-        )
+        st.caption(t("tm.comment_caption"))
 
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Threads by day of week")
-        g = t["dow"].value_counts().reindex(DOW_ORDER).fillna(0).reset_index()
+        st.subheader(t("tm.by_dow"))
+        g = tt["dow"].value_counts().reindex(DOW_ORDER).fillna(0).reset_index()
         g.columns = ["dow", "threads"]
-        fig = px.bar(g, x="dow", y="threads", labels={"dow": "", "threads": "Threads"})
+        fig = px.bar(g, x="dow", y="threads", labels={"dow": "", "threads": t("lbl.threads")})
         fig.update_traces(marker_color=EINK["ink"])
         st.plotly_chart(style(fig, 330), use_container_width=True, key="tm_dow")
     with col2:
-        st.subheader("Threads by hour of day")
-        g = t["hour"].value_counts().reindex(range(24)).fillna(0).reset_index()
+        st.subheader(t("tm.by_hour"))
+        g = tt["hour"].value_counts().reindex(range(24)).fillna(0).reset_index()
         g.columns = ["hour", "threads"]
-        fig = px.bar(g, x="hour", y="threads", labels={"hour": "Hour (WIB)", "threads": "Threads"})
+        fig = px.bar(g, x="hour", y="threads",
+                     labels={"hour": t("lbl.hour"), "threads": t("lbl.threads")})
         fig.update_traces(marker_color="#7C7C7C")
         st.plotly_chart(style(fig, 330), use_container_width=True, key="tm_hour")
 
@@ -1147,10 +1648,10 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
     # automod runs" rather than when an ordinary post earns replies. Medians are
     # used because replies/score are heavy-tailed: one viral thread moves an
     # hourly mean by tens of points, while the median barely budges.
-    st.subheader("Replies & score per hour (organic threads)")
-    organic = t[~t["link_flair_text"].isin(AUTO_POST_FLAIRS)]
+    st.subheader(t("tm.replies_score"))
+    organic = tt[~tt["link_flair_text"].isin(AUTO_POST_FLAIRS)]
     if organic.empty:
-        st.info("No organic threads for the current filters.")
+        st.info(t("tm.no_organic"))
     else:
         e = (
             organic.groupby("hour")
@@ -1165,62 +1666,56 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.10)
         fig.add_trace(
             go.Bar(
-                x=e["hour"], y=e["med_comments"], name="Median replies / thread",
+                x=e["hour"], y=e["med_comments"], name=t("tm.trace_median_replies"),
                 marker_color=EINK["ink"], marker_line_width=0,
                 customdata=e[["n", "mean_comments"]],
-                hovertemplate="Hour %{x}:00 WIB<br>median %{y:.0f} replies<br>"
-                              "mean %{customdata[1]:.0f} · n=%{customdata[0]}<extra></extra>",
+                hovertemplate=t("tm.hover_replies"),
             ), row=1, col=1,
         )
         fig.add_trace(
             go.Scatter(
                 x=e["hour"], y=e["mean_comments"], mode="markers",
-                name="Mean (viral-tail sensitive)",
+                name=t("tm.trace_mean"),
                 marker=dict(color=EINK["accent"], size=8, symbol="diamond"),
-                hovertemplate="Hour %{x}:00 WIB<br>mean %{y:.0f} replies<extra></extra>",
+                hovertemplate=t("tm.hover_mean"),
             ), row=1, col=1,
         )
         fig.add_trace(
             go.Scatter(
                 x=e["hour"], y=e["med_score"], mode="lines+markers",
-                name="Median score / thread",
+                name=t("tm.trace_median_score"),
                 line=dict(color=EINK["ink"], width=2), marker=dict(color=EINK["ink"], size=5),
-                hovertemplate="Hour %{x}:00 WIB<br>median score %{y:.0f}<extra></extra>",
+                hovertemplate=t("tm.hover_score"),
             ), row=2, col=1,
         )
-        fig.update_yaxes(title_text="Replies / thread", row=1, col=1)
-        fig.update_yaxes(title_text="Score / thread", row=2, col=1)
+        fig.update_yaxes(title_text=t("lbl.replies_per_thread"), row=1, col=1)
+        fig.update_yaxes(title_text=t("lbl.score_per_thread"), row=2, col=1)
         fig.update_xaxes(dtick=2, row=1, col=1)
-        fig.update_xaxes(dtick=2, title_text="Hour (WIB)", row=2, col=1)
+        fig.update_xaxes(dtick=2, title_text=t("lbl.hour"), row=2, col=1)
         fig = style(fig, 540)
         fig.update_layout(margin=dict(l=10, r=10, t=64, b=10))
         st.plotly_chart(fig, use_container_width=True, key="tm_eng")
 
         best = e.loc[e["med_comments"].idxmax()]
-        st.caption(
-            f"Median is the headline because the reply and score distributions are "
-            f"heavy-tailed; the red diamond is the mean, for contrast. Busiest hour: "
-            f"**{int(best['hour']):02d}:00 WIB** ({best['med_comments']:.0f} median replies). "
-            f"n = {int(e['n'].sum()):,} organic threads — auto-posted chat threads are "
-            f"excluded (tick *Exclude auto-posted threads* for the same view everywhere)."
-        )
+        st.caption(t("tm.eng_caption").format(
+            hour=f"{int(best['hour']):02d}:00", med=best["med_comments"],
+            n=f"{int(e['n'].sum()):,}",
+        ))
 
     st.divider()
-    st.subheader("Reference: WIB hourly activity file")
+    st.subheader(t("tm.reference"))
     wh = load("wib_hourly_activity")
     if wh.empty:
-        st.warning("wib_hourly_activity.parquet not found in cache.")
+        st.warning(t("tm.ref_missing"))
     else:
-        st.info("Static snapshot from `wib_hourly_activity.csv` (full 7×24 grid). "
-                "**All-time baseline — it deliberately does not follow the sidebar filters.** "
-                "Columns `total_comments` and `avg_score` also exist in the file but are not plotted here.")
+        st.info(t("tm.ref_info"))
         grid = (
             wh.pivot_table(index="wib_day_of_week", columns="wib_hour",
                            values="threads_count", aggfunc="sum")
             .reindex(DOW_ORDER).reindex(columns=range(24)).fillna(0)
         )
         fig = px.imshow(grid, aspect="auto", color_continuous_scale=EINK_SEQ_BLUE,
-                        labels=dict(x="Hour (WIB)", y="", color="Threads"))
+                        labels=dict(x=t("lbl.hour"), y="", color=t("lbl.threads")))
         fig.update_xaxes(dtick=2)
         st.plotly_chart(style(fig, 380), use_container_width=True, key="tm_ref")
 
@@ -1235,16 +1730,13 @@ def page_sentiment(sent: pd.DataFrame, llm_sent: pd.DataFrame | None = None) -> 
       3. HF model on the same 10K     -> an apples-to-apples agreement check.
       4. 40-comment gold benchmark    -> a small external sanity check.
     """
-    st.header("Sentiment analytics")
+    st.header(t("se.title"))
 
     overview = load_json("sentiment_overview")
     hf_full = load("sentiment_full_slim") if (CACHE / "sentiment_full_slim.parquet").exists() else pd.DataFrame()
 
     if not overview or hf_full.empty:
-        st.error(
-            "Sentiment artifacts are missing. Run `python src/build_sentiment_cache.py` "
-            "after the full-corpus model output is in the workspace root."
-        )
+        st.error(t("se.missing"))
         return
 
     full = overview.get("full_corpus", {})
@@ -1253,109 +1745,99 @@ def page_sentiment(sent: pd.DataFrame, llm_sent: pd.DataFrame | None = None) -> 
     hf10 = overview.get("hf_10k_sample", {})
     calib = overview.get("calibration", {})
 
-    # --------------------------------------------------------------- overview
-    st.subheader("Coverage and headline distribution")
+    # Sentiment labels are data values ("positive"/"neutral"/"negative"); only the
+    # displayed form is localised, so the underlying order stays canonical.
+    sent_labels = {k: t(f"sent.{k}") for k in SENTIMENT_ORDER}
+    order_l10n = [sent_labels[k] for k in SENTIMENT_ORDER]
+
+    st.subheader(t("se.coverage"))
     c = st.columns(4)
-    c[0].metric("Full corpus comments", fmt_int(full.get("rows", 0)))
-    c[1].metric("LLM reference sample", fmt_int(llm10.get("rows", 0)))
-    c[2].metric("Model mean confidence", f"{full.get('mean_confidence', 0):.2f}")
-    c[3].metric("Model labels, low conf <0.60", f"{full.get('low_confidence_lt_0_6', 0):.1%}")
+    c[0].metric(t("se.full_corpus"), fmt_int(full.get("rows", 0)))
+    c[1].metric(t("se.llm_sample"), fmt_int(llm10.get("rows", 0)))
+    c[2].metric(t("se.mean_conf"), f"{full.get('mean_confidence', 0):.2f}")
+    c[3].metric(t("se.low_conf"), f"{full.get('low_confidence_lt_0_6', 0):.1%}")
 
     obs = full.get("distribution_pct", {})
-    obs_df = pd.DataFrame(
-        {"label": SENTIMENT_ORDER,
-         "share": [obs.get(l, 0) for l in SENTIMENT_ORDER]}
-    )
     corr = calib.get("corrected", {})
     ref = llm10.get("distribution", {})
     ref_total = sum(ref.values()) or 1
     cmp_df = pd.DataFrame({
-        "label": SENTIMENT_ORDER,
-        "Model (raw, 678K)": [obs.get(l, 0) for l in SENTIMENT_ORDER],
-        "LLM reference (10K)": [ref.get(l, 0) / ref_total for l in SENTIMENT_ORDER],
-        "Model (bias-corrected)": [corr.get(l, 0) for l in SENTIMENT_ORDER],
+        "label": order_l10n,
+        t("se.series_raw"): [obs.get(l, 0) for l in SENTIMENT_ORDER],
+        t("se.series_llm"): [ref.get(l, 0) / ref_total for l in SENTIMENT_ORDER],
+        t("se.series_corrected"): [corr.get(l, 0) for l in SENTIMENT_ORDER],
     }).melt(id_vars="label", var_name="series", value_name="share")
 
     fig = px.bar(
         cmp_df, x="label", y="share", color="series", barmode="group",
         color_discrete_sequence=[EINK["accent"], EINK["ink"], "#9A9A9A"],
-        labels={"label": "", "share": "Share of comments", "series": ""},
-        category_orders={"label": SENTIMENT_ORDER},
+        labels={"label": "", "share": t("lbl.share"), "series": ""},
+        category_orders={"label": order_l10n},
     )
     fig.update_yaxes(tickformat=".0%")
     st.plotly_chart(style(fig, 360), use_container_width=True, key="se_dist_compare")
-    st.caption(
-        "The raw model calls two-thirds of comments negative and nearly eliminates "
-        "neutral. The bias-corrected estimate — derived from the 10K confusion matrix — "
-        "lands close to the independent LLM reference, which is strong evidence the "
-        "raw full-corpus distribution is an artifact, not a finding."
-    )
+    st.caption(t("se.dist_caption"))
 
     # ------------------------------------------------------------- calibration
-    st.subheader("Calibration: correcting the model's negative skew")
+    st.subheader(t("se.calibration"))
     k = st.columns(3)
-    k[0].metric("Agreement vs. LLM reference", f"{comp.get('exact_agreement', 0):.1%}")
-    k[1].metric("Cohen's kappa", f"{comp.get('cohen_kappa', 0):.3f}")
-    k[2].metric("Disagreements", fmt_int(comp.get("disagreements", 0)))
-
-    st.markdown(
-        f"**Model transition behavior** (rows = LLM reference, columns = model): "
-        f"when the rubric says *neutral*, the model keeps neutral only "
-        f"**{comp.get('confusion_matrix', {}).get('neutral', {}).get('neutral', 0) / max(1, sum(comp.get('confusion_matrix', {}).get('neutral', {}).values())):.1%}** "
-        f"of the time and otherwise relabels it negative. This is the mechanism behind "
-        f"the inflated negative share."
-    )
+    k[0].metric(t("se.agreement"), f"{comp.get('exact_agreement', 0):.1%}")
+    k[1].metric(t("se.kappa"), f"{comp.get('cohen_kappa', 0):.3f}")
+    k[2].metric(t("se.disagreements"), fmt_int(comp.get("disagreements", 0)))
 
     cm = comp.get("confusion_matrix", {})
+    neutral_row = cm.get("neutral", {})
+    neutral_kept = neutral_row.get("neutral", 0) / max(1, sum(neutral_row.values()))
+    st.markdown(t("se.transition").format(pct=f"{neutral_kept:.1%}"))
+
     if cm:
         cm_df = pd.DataFrame(
             [[cm.get(r, {}).get(col, 0) for col in SENTIMENT_ORDER] for r in SENTIMENT_ORDER],
-            index=[f"LLM {r}" for r in SENTIMENT_ORDER],
-            columns=[f"Model {col}" for col in SENTIMENT_ORDER],
+            index=order_l10n,
+            columns=order_l10n,
         )
         fig = px.imshow(
             cm_df, text_auto=True, aspect="auto",
             color_continuous_scale=EINK_SEQ,
-            labels={"x": "Model label", "y": "LLM reference label", "color": "Comments"},
+            labels={"x": t("lbl.model_label"), "y": t("lbl.ref_label"),
+                    "color": t("lbl.comments")},
         )
         st.plotly_chart(style(fig, 340), use_container_width=True, key="se_cm")
 
     pl = pd.DataFrame(comp.get("per_label_vs_reference", []))
     if not pl.empty:
+        pl["label"] = pl["label"].map(sent_labels).fillna(pl["label"])
         pl = pl.rename(columns={
-            "label": "Label", "support": "LLM support",
-            "precision": "Precision vs. LLM", "recall": "Recall vs. LLM", "f1": "F1",
+            "label": t("lbl.label"), "support": t("lbl.support"),
+            "precision": t("lbl.precision"), "recall": t("lbl.recall"), "f1": t("lbl.f1"),
         })
         st.dataframe(pl, use_container_width=True, hide_index=True)
 
     ac = pd.DataFrame(
-        [{"Confidence": k2, **v} for k2, v in comp.get("agreement_by_confidence", {}).items()]
+        [{t("lbl.confidence"): k2, **v}
+         for k2, v in comp.get("agreement_by_confidence", {}).items()]
     )
     if not ac.empty:
-        ac = ac.rename(columns={"n": "Comments", "agreement": "Agreement vs. LLM"})
-        ac["Agreement vs. LLM"] = (ac["Agreement vs. LLM"] * 100).round(1).astype(str) + "%"
-        st.caption("Agreement barely improves with confidence — a sign the model is confidently wrong.")
+        ac = ac.rename(columns={"n": t("lbl.comments"), "agreement": t("se.agreement_conf")})
+        ac[t("se.agreement_conf")] = (ac[t("se.agreement_conf")] * 100).round(1).astype(str) + "%"
+        st.caption(t("se.agree_conf_caption"))
         st.dataframe(ac, use_container_width=True, hide_index=True)
 
-    st.info(
-        "Interpretation: the LLM reference is a 10K rubric sample, not absolute truth, "
-        "so these figures measure agreement between two labelers, not the model's true "
-        "accuracy. Use the bias-corrected shares for any claim about the corpus."
-    )
+    st.info(t("se.interpretation"))
 
     # ------------------------------------------------------- full-corpus slices
     st.divider()
-    st.subheader("Full-corpus sentiment by flair and time")
-    st.caption(
-        "Model labels across all 678,522 comments, broken down by thread flair and month. "
-        "Slices inherit the model's negative skew; read shapes and relative differences, "
-        "not absolute levels."
-    )
+    st.subheader(t("se.slices"))
+    st.caption(t("se.slices_caption"))
 
     view_mode = st.radio(
-        "Distribution mode", ["Raw model labels", "Bias-corrected"], horizontal=True,
-        key="se_view_mode",
+        t("se.view_mode"), ["raw", "corrected"], horizontal=True, key="se_view_mode",
+        format_func=lambda v: t("se.raw") if v == "raw" else t("se.corrected"),
     )
+
+    # The legend is driven by the label column, so the colour map has to be keyed
+    # by the *localised* label once the frame carries localised values.
+    colors_l10n = {sent_labels[k]: v for k, v in SENTIMENT_COLORS.items()}
 
     bf = load("sentiment_by_flair") if (CACHE / "sentiment_by_flair.parquet").exists() else pd.DataFrame()
     if not bf.empty:
@@ -1365,7 +1847,7 @@ def page_sentiment(sent: pd.DataFrame, llm_sent: pd.DataFrame | None = None) -> 
         piv = piv.sort_values("total", ascending=False)
         shares = piv[SENTIMENT_ORDER].div(piv["total"], axis=0)
 
-        if view_mode == "Bias-corrected":
+        if view_mode == "corrected":
             tm = pd.DataFrame(
                 calib.get("transition_matrix_p_model_given_reference", {})
             ).reindex(index=SENTIMENT_ORDER, columns=SENTIMENT_ORDER).fillna(0)
@@ -1376,18 +1858,19 @@ def page_sentiment(sent: pd.DataFrame, llm_sent: pd.DataFrame | None = None) -> 
             row = corrected.sum(axis=1, keepdims=True)
             corrected = np.divide(corrected, row, out=np.zeros_like(corrected), where=row > 0)
             shares = pd.DataFrame(corrected, index=shares.index, columns=SENTIMENT_ORDER)
-            st.caption("Bias-corrected shares can be noisy for small flairs; treat low-volume flairs cautiously.")
+            st.caption(t("se.corrected_caption"))
 
         top = shares.head(15)
         long = top.reset_index().melt(
             id_vars="flair", var_name="label", value_name="share",
             value_vars=SENTIMENT_ORDER,
         )
+        long["label"] = long["label"].map(sent_labels)
         fig = px.bar(
             long, x="share", y="flair", color="label", orientation="h", barmode="stack",
-            color_discrete_map=SENTIMENT_COLORS,
-            labels={"share": "Share of comments", "flair": "", "label": ""},
-            category_orders={"label": SENTIMENT_ORDER},
+            color_discrete_map=colors_l10n,
+            labels={"share": t("lbl.share"), "flair": "", "label": ""},
+            category_orders={"label": order_l10n},
         )
         fig.update_layout(yaxis=dict(autorange="reversed"))
         fig.update_xaxes(tickformat=".0%")
@@ -1397,7 +1880,7 @@ def page_sentiment(sent: pd.DataFrame, llm_sent: pd.DataFrame | None = None) -> 
     if not bfm.empty:
         flairs = sorted(bfm["flair"].unique())
         picked = st.multiselect(
-            "Flairs to compare over time", flairs,
+            t("se.flairs_over_time"), flairs,
             default=flairs[: min(3, len(flairs))], key="se_flair_month_chart",
         )
         sub = bfm[bfm["flair"].isin(picked)] if picked else bfm
@@ -1405,103 +1888,320 @@ def page_sentiment(sent: pd.DataFrame, llm_sent: pd.DataFrame | None = None) -> 
             agg = sub.groupby(["month", "label"], observed=True)["n"].sum().reset_index()
             tot = agg.groupby("month")["n"].transform("sum")
             agg["share"] = agg["n"] / tot
+            agg["label"] = agg["label"].map(sent_labels)
             fig = px.line(
                 agg, x="month", y="share", color="label", markers=True,
-                color_discrete_map=SENTIMENT_COLORS,
-                labels={"month": "", "share": "Share of comments", "label": ""},
-                category_orders={"label": SENTIMENT_ORDER},
+                color_discrete_map=colors_l10n,
+                labels={"month": "", "share": t("lbl.share"), "label": ""},
+                category_orders={"label": order_l10n},
             )
             fig.update_yaxes(tickformat=".0%")
             st.plotly_chart(style(fig, 340), use_container_width=True, key="se_flair_month")
 
     # ------------------------------------------------------ disagreement explorer
     st.divider()
-    st.subheader("Where the model and the rubric disagree")
+    st.subheader(t("se.disagreement_title"))
     cmp_path = CACHE / "sentiment_compare_10k.parquet"
     if cmp_path.exists():
         cmp_df = load("sentiment_compare_10k")
         cc = st.columns(3)
-        cc[0].metric("Compared comments", fmt_int(len(cmp_df)))
-        cc[1].metric("Agree", fmt_int(int(cmp_df["agree"].sum())))
-        cc[2].metric("Disagree", fmt_int(int((~cmp_df["agree"]).sum())))
+        cc[0].metric(t("se.compared"), fmt_int(len(cmp_df)))
+        cc[1].metric(t("se.agree"), fmt_int(int(cmp_df["agree"].sum())))
+        cc[2].metric(t("se.disagree"), fmt_int(int((~cmp_df["agree"]).sum())))
 
-        only_dis = st.checkbox("Show disagreements only", value=True, key="se_only_dis")
+        only_dis = st.checkbox(t("se.only_dis"), value=True, key="se_only_dis")
         view = cmp_df[~cmp_df["agree"]] if only_dis else cmp_df
 
         fl = st.multiselect(
-            "Filter by flair", sorted(view["flair"].dropna().unique()),
+            t("se.filter_flair"), sorted(view["flair"].dropna().unique()),
             key="se_dis_flair",
         )
         if fl:
             view = view[view["flair"].isin(fl)]
 
-        q = st.text_input("Search comment text", "", key="se_dis_q")
+        q = st.text_input(t("se.search_comment"), "", key="se_dis_q")
         if q:
             view = view[view["body"].fillna("").str.contains(q, case=False, regex=False)]
 
-        show_cols = [c2 for c2 in ["body", "llm_label", "hf_label", "hf_confidence", "flair", "route"] if c2 in view]
+        show_cols = [c2 for c2 in ["body", "llm_label", "hf_label", "hf_confidence", "flair", "route"]
+                     if c2 in view]
         view = view.sort_values("hf_confidence", ascending=False)
-        st.dataframe(view[show_cols].head(400), use_container_width=True, hide_index=True, height=380)
-        st.caption(
-            "High-confidence disagreements at the top are the most informative: the model "
-            "is sure and the rubric disagrees. These rows are a practical audit list."
-        )
+        disp = view[show_cols].head(400).copy()
+        for col in ("llm_label", "hf_label"):
+            if col in disp:
+                disp[col] = disp[col].map(sent_labels).fillna(disp[col])
+        disp = disp.rename(columns={
+            "body": t("lbl.comment"), "llm_label": t("lbl.llm_label"),
+            "hf_label": t("lbl.hf_label"), "hf_confidence": t("lbl.confidence"),
+            "flair": t("lbl.flair"), "route": t("lbl.route"),
+        })
+        st.dataframe(disp, use_container_width=True, hide_index=True, height=380)
+        st.caption(t("se.disagreement_hint"))
     else:
-        st.info("Run `python src/build_sentiment_cache.py` to enable the disagreement explorer.")
+        st.info(t("se.build_hint"))
 
     # ------------------------------------------------------------- gold 40 check
     st.divider()
-    st.subheader("Small external check: 40-comment gold benchmark")
+    st.subheader(t("se.gold_title"))
     bench_path = CACHE / "sentiment_router_gold40.benchmark.json"
     if bench_path.exists():
         bench = json.loads(bench_path.read_text(encoding="utf-8"))
         b = st.columns(4)
-        b[0].metric("Gold rows matched", fmt_int(bench.get("matched_rows", 0)))
-        b[1].metric("Agreement", f"{bench.get('accuracy', 0):.1%}")
-        b[2].metric("Mean confidence", f"{bench.get('mean_confidence', 0):.2f}")
+        b[0].metric(t("se.gold_rows"), fmt_int(bench.get("matched_rows", 0)))
+        b[1].metric(t("se.gold_agreement"), f"{bench.get('accuracy', 0):.1%}")
+        b[2].metric(t("se.gold_mean_conf"), f"{bench.get('mean_confidence', 0):.2f}")
         hc = bench.get("accuracy_high_confidence_ge_0_8")
-        b[3].metric("Agreement, conf ≥0.8", f"{hc:.1%}" if hc is not None else "-")
-        st.caption(
-            "Only 40 rows and drawn from the same LLM rubric, so it is a sanity check, "
-            "not independent validation. It agrees with the 10K finding: the model is "
-            "confident and skewed negative."
-        )
+        b[3].metric(t("se.gold_hc"), f"{hc:.1%}" if hc is not None else "-")
+        st.caption(t("se.gold_caption"))
 
     # ------------------------------------------------------------------- samples
     st.divider()
-    st.subheader("Inspect labeled comments")
+    st.subheader(t("se.sample_title"))
     which = st.radio(
-        "Dataset", ["LLM reference (10K)", "Model (10K sample)"], horizontal=True,
-        key="se_sample_which",
+        t("se.dataset"), ["llm", "hf"], horizontal=True, key="se_sample_which",
+        format_func=lambda v: t("se.opt_llm") if v == "llm" else t("se.opt_hf"),
     )
-    if which.startswith("LLM") and llm_sent is not None and not llm_sent.empty:
+    sample_cols = {
+        "body": t("lbl.comment"), "label": t("lbl.label"), "llm_label": t("lbl.llm_label"),
+        "confidence": t("lbl.confidence"), "route": t("lbl.route"),
+        "comment_id": t("lbl.comment_id"), "score": t("lbl.score"),
+        "created_wib": t("lbl.created"),
+    }
+    if which == "llm" and llm_sent is not None and not llm_sent.empty:
         sdf = llm_sent.copy()
         lcol = "label" if "label" in sdf.columns else "llm_label"
-        q = st.text_input("Search LLM-labeled text", "", key="se_llm_q2")
+        if lcol in sdf.columns:
+            sdf[lcol] = sdf[lcol].map(sent_labels).fillna(sdf[lcol])
+        q = st.text_input(t("se.search_llm"), "", key="se_llm_q2")
         if q:
             sdf = sdf[sdf["body"].fillna("").str.contains(q, case=False, regex=False)]
         cols = [c2 for c2 in ["body", lcol, "score", "created_wib", "comment_id"] if c2 in sdf]
-        st.dataframe(sdf[cols].head(400), use_container_width=True, hide_index=True, height=340)
+        st.dataframe(sdf[cols].head(400).rename(columns=sample_cols),
+                     use_container_width=True, hide_index=True, height=340)
     else:
         sdf = load("sentiment_hf_10k") if (CACHE / "sentiment_hf_10k.parquet").exists() else pd.DataFrame()
         if sdf.empty:
-            st.info("No 10K model sample available.")
+            st.info(t("se.no_10k"))
         else:
-            q = st.text_input("Search model-labeled text", "", key="se_hf_q")
+            if "label" in sdf.columns:
+                sdf["label"] = sdf["label"].map(sent_labels).fillna(sdf["label"])
+            q = st.text_input(t("se.search_hf"), "", key="se_hf_q")
             if q:
                 sdf = sdf[sdf["body"].fillna("").str.contains(q, case=False, regex=False)]
             cols = [c2 for c2 in ["body", "label", "confidence", "route", "comment_id"] if c2 in sdf]
-            st.dataframe(sdf[cols].head(400), use_container_width=True, hide_index=True, height=340)
+            st.dataframe(sdf[cols].head(400).rename(columns=sample_cols),
+                         use_container_width=True, hide_index=True, height=340)
+
+
+METHOD_DOC: dict[str, str] = {
+    "id": """\
+Halaman ini menjelaskan cara kerja dashboard: apa isinya, apa arti tiap grafik, dan
+jebakan interpretasi yang perlu diketahui sebelum menarik kesimpulan.
+
+## Apa ini
+
+Dashboard menganalisis **r/indonesia** dari snapshot hasil scraping — bukan tarikan
+langsung dari Reddit. Seluruh waktu dikonversi ke **WIB (UTC+7)** dan nama pengguna
+dianonimkan menjadi UUID, sehingga papan peringkat penulis berbasis UUID, bukan username
+Reddit.
+
+| Item | Nilai |
+| --- | --- |
+| Thread | {threads} |
+| Komentar | {comments} |
+| Rentang data | {span} |
+| Zona waktu | WIB (UTC+7) |
+| Rata-rata / median skor thread | {avg_score} / {median_score} |
+| Thread otomatis (automod) | {auto_threads} thread, {auto_pct} dari seluruh komentar |
+
+## Cara membaca: live vs snapshot
+
+- **Live** — ikut berubah ketika filter di sidebar diubah. Ini mayoritas grafik.
+- **Snapshot statis** — dihitung sekali di luar aplikasi dari berkas CSV dan
+  **mengabaikan filter** (papan peringkat penulis, `flair_performance`,
+  `flair_top_words`, grafik referensi WIB). Selalu diberi label di antarmuka.
+
+## Isi tiap halaman
+
+**📈 Ikhtisar** — lima metrik utama (thread, komentar, kontributor, total skor,
+rata-rata skor), aktivitas dari waktu ke waktu, 15 flair teratas, sebaran skor thread,
+dan scatter skor vs. komentar.
+
+**🧵 Thread** — tiga tab: *Thread teratas* (urutkan berdasarkan skor / komentar / rasio
+upvote / rata-rata skor komentar), *Jelajahi / cari* (cari di judul & isi, unduh CSV),
+dan *Detail flair* (perbandingan metrik antar-flair).
+
+**💬 Komentar** — statistik live komentar, volume dari waktu ke waktu, sebaran skor,
+sebaran komentar per thread, 15 komentar berskor tertinggi & terendah, sebaran panjang
+teks, dan daftar komentar terpanjang.
+
+**👥 Penulis** — peringkat live yang menggabungkan thread yang dibuat dengan komentar
+yang ditulis, plus scatter yang memisahkan "pembuat thread" dari "komentator". Tab kedua
+menampilkan berkas papan peringkat statis.
+
+**🏷️ Flair** — donut jumlah thread per flair, scatter profil interaksi (rata-rata
+komentar vs. rata-rata skor), heatmap metrik ternormalisasi, kata teratas per flair, dan
+referensi performa flair.
+
+**🕐 Waktu** — heatmap hari × jam untuk thread dan komentar, jumlah thread per hari dan
+per jam, **median balasan & skor per jam untuk thread organik**, dan heatmap referensi
+statis.
+
+**🎭 Sentimen** — cakupan dan distribusi label, kalibrasi (kesepakatan, Cohen's kappa,
+matriks konfusi), sentimen per flair dan per bulan, penjelajah ketidaksepakatan, serta
+benchmark emas 40 komentar.
+
+## Tiga temuan utama
+
+1. **r/indonesia mayoritas netral, bukan negatif.** Model mentah menyebut ~67% komentar
+   negatif, tetapi setelah koreksi bias angkanya turun ke ~30% dan mendekati rujukan LLM
+   independen. Distribusi mentah adalah artefak model, bukan sifat subreddit.
+2. **Ada dua mode sukses.** *Mesin diskusi* (News, Ask Indonesian — banyak komentar,
+   skor rendah) berbeda dari *mesin upvote* (Funny/Memes, Current Affair — skor tinggi,
+   rasio upvote 0.92).
+3. **Partisipasi sangat terpusat.** 1% komentator teratas menulis ~38% dari seluruh
+   komentar, sementara ~34% komentator hanya muncul sekali.
+
+## Jebakan interpretasi
+
+1. **Pakai median, bukan rata-rata.** Skor dan jumlah komentar berekor sangat berat,
+   sehingga segelintir thread viral menyeret rata-rata naik (rata-rata skor {avg_score}
+   vs. median {median_score}).
+2. **Kecualikan thread otomatis** untuk pertanyaan tentang perilaku manusia. Thread
+   Daily/Weekend Chat hanya ~2% dari thread tetapi ~22% dari komentar, dan diposting
+   otomatis pada jam tetap (07:00 WIB).
+3. **Filter tanggal berlaku pada thread, bukan komentar.** Komentar mengikuti thread
+   induknya, jadi komentar yang diposting setelah jendela waktu bisa ikut terhitung.
+4. **Selisih angka komentar bukan bug.** {comments} adalah baris yang benar-benar ada di
+   cache; total "aktual" pada kolom thread sedikit lebih besar karena sebagian komentar
+   Reddit tidak ikut terscrape; angka korpus sentimen lebih kecil lagi karena penyaringan
+   di skrip pelabelan.
+5. **Skor menumpuk seiring waktu.** Bulan-bulan terakhir belum "matang" — thread belum
+   sempat mengumpulkan upvote dan komentar — jadi tren waktu cenderung meremehkan
+   periode terkini.
+6. **Keyakinan model bukan akurasi.** Kesepakatan model vs. rubrik hanya 45.5% dan hampir
+   tidak membaik pada keyakinan tinggi.
+""",
+    "en": """\
+This page explains how the dashboard works: what it contains, what each chart means, and
+the interpretation traps to know before drawing conclusions.
+
+## What this is
+
+The dashboard analyses **r/indonesia** from a scraping snapshot — not a live Reddit feed.
+All times are converted to **WIB (UTC+7)** and usernames are anonymised to UUIDs, so the
+author leaderboards are keyed by UUID rather than Reddit username.
+
+| Item | Value |
+| --- | --- |
+| Threads | {threads} |
+| Comments | {comments} |
+| Data range | {span} |
+| Timezone | WIB (UTC+7) |
+| Mean / median thread score | {avg_score} / {median_score} |
+| Auto-posted (automod) threads | {auto_threads} threads, {auto_pct} of all comments |
+
+## How to read it: live vs snapshot
+
+- **Live** — recomputes when you change the sidebar filters. This is most charts.
+- **Static snapshot** — computed once outside the app from a CSV, and **ignores the
+  filters** (author leaderboard, `flair_performance`, `flair_top_words`, the WIB reference
+  chart). These are always labelled in the interface.
+
+## What each page contains
+
+**📈 Overview** — five headline metrics (threads, comments, contributors, total score,
+mean score), activity over time, the top 15 flairs, the thread-score distribution, and a
+score vs. comments scatter.
+
+**🧵 Threads** — three tabs: *Top threads* (rank by score / comments / upvote ratio /
+mean comment score), *Browse / search* (search title and body, download CSV), and *Flair
+detail* (side-by-side flair metrics).
+
+**💬 Comments** — live comment stats, volume over time, score distribution, comments per
+thread, the 15 highest- and lowest-scored comments, text-length distribution, and the
+longest comments.
+
+**👥 Authors** — a live ranking combining threads created with comments written, plus a
+scatter separating "thread creators" from "commenters". The second tab shows the static
+leaderboard file.
+
+**🏷️ Flairs** — a donut of threads per flair, an engagement-profile scatter (mean
+comments vs. mean score), a normalised metric heatmap, top words per flair, and the
+reference flair performance.
+
+**🕐 Timing** — day × hour heatmaps for threads and comments, thread counts by day and by
+hour, **median replies and score per hour for organic threads**, and the static reference
+heatmap.
+
+**🎭 Sentiment** — label coverage and distribution, calibration (agreement, Cohen's
+kappa, confusion matrix), sentiment by flair and by month, a disagreement explorer, and a
+40-comment gold benchmark.
+
+## Three key findings
+
+1. **r/indonesia is mostly neutral, not negative.** The raw model calls ~67% of comments
+   negative, but after bias correction that drops to ~30%, close to the independent LLM
+   reference. The raw distribution is a model artifact, not a property of the subreddit.
+2. **There are two modes of success.** *Discussion engines* (News, Ask Indonesian — many
+   comments, low scores) differ from *upvote engines* (Funny/Memes, Current Affair — high
+   scores, 0.92 upvote ratio).
+3. **Participation is heavily concentrated.** The top 1% of commenters write ~38% of all
+   comments, while ~34% of commenters appear only once.
+
+## Interpretation traps
+
+1. **Use medians, not means.** Replies and scores are extremely heavy-tailed, so a
+   handful of viral threads drags the mean upward (mean score {avg_score} vs. median
+   {median_score}).
+2. **Exclude auto-posted threads** for questions about human behaviour. Daily/Weekend
+   Chat Threads are ~2% of threads but ~22% of comments, and are posted automatically on a
+   fixed hour (07:00 WIB).
+3. **The date filter applies to threads, not comments.** Comments follow their parent
+   thread, so a comment posted after the window can still be counted.
+4. **The comment-count differences are not a bug.** {comments} is the number of rows
+   actually in the cache; the "actual" column total on threads is slightly higher because
+   some Reddit comments were never scraped; the sentiment corpus is lower again because of
+   the labelling script's filters.
+5. **Scores accumulate over time.** Recent months are not yet "mature" — those threads
+   have had less time to collect upvotes and comments — so time trends tend to understate
+   the most recent period.
+6. **Model confidence is not accuracy.** Model-vs-rubric agreement is only 45.5% and
+   barely improves at high confidence.
+""",
+}
+
+
+def page_methodology(th_all: pd.DataFrame, cm_all: pd.DataFrame) -> None:
+    """Plain-language guide to the dataset, the pages, and the caveats."""
+    st.header(f"📖 {t('nav.methodology')}")
+
+    if th_all.empty:
+        st.info(t("msg.no_data"))
+        return
+
+    auto = th_all[th_all["link_flair_text"].isin(AUTO_POST_FLAIRS)]
+    total_actual = th_all["total_comments_actual"].sum()
+    vals = {
+        "threads": fmt_int(len(th_all)),
+        "comments": fmt_int(len(cm_all)),
+        "span": f"{fmt_date(th_all['created_wib'].min())} → {fmt_date(th_all['created_wib'].max())}",
+        "avg_score": f"{th_all['score'].mean():.1f}",
+        "median_score": f"{th_all['score'].median():.0f}",
+        "auto_threads": fmt_int(len(auto)),
+        "auto_pct": f"{auto['total_comments_actual'].sum() / max(total_actual, 1):.1%}",
+    }
+    st.markdown(METHOD_DOC.get(lang(), METHOD_DOC["en"]).format(**vals))
 
 
 def main() -> None:
     if not cache_ready():
-        st.title("📊 r/indonesia Analytics")
-        st.error("Cache not found. Build it once from the raw CSVs (takes ~1–2 minutes).")
+        st.title(t("msg.no_cache_title"))
+        st.error(t("msg.no_cache"))
         st.code("python src/build_cache.py", language="bash")
-        st.caption(f"Expected location: `{CACHE}`")
-        if st.button("🔨 Build cache now", type="primary"):
-            with st.spinner("Building cache… this can take a couple of minutes."):
+        st.caption(t("msg.no_cache_expected").format(path=CACHE))
+        if st.button(t("msg.build_now"), type="primary"):
+            with st.spinner(t("msg.building")):
                 import subprocess  # noqa: PLC0415
                 import sys  # noqa: PLC0415
 
@@ -1510,11 +2210,11 @@ def main() -> None:
                     capture_output=True, text=True, cwd=str(BASE),
                 )
             if res.returncode == 0:
-                st.success("Cache built. Reloading…")
+                st.success(t("msg.built"))
                 st.cache_data.clear()
                 st.rerun()
             else:
-                st.error("Build failed.")
+                st.error(t("msg.build_failed"))
                 st.code(res.stderr[-3000:] or res.stdout[-3000:])
         return
 
@@ -1526,8 +2226,19 @@ def main() -> None:
     llm_sent = load("comment_sentiment_llm_10k") if (CACHE / "comment_sentiment_llm_10k.parquet").exists() else pd.DataFrame()
     meta = load_meta()
 
+    # Language is picked first so the rest of the sidebar and every page below
+    # render in it on the same run.
+    st.sidebar.selectbox(
+        "Bahasa / Language",
+        options=list(LANGS),
+        format_func=lambda k: LANGS[k],
+        index=list(LANGS).index(lang()),
+        key="lang_select",
+    )
+    st.session_state["lang"] = st.session_state["lang_select"]
+
     st.sidebar.title("📊 r/indonesia")
-    st.sidebar.caption("Indonesian subreddit dataset")
+    st.sidebar.caption(t("sb.subtitle"))
 
     f = sidebar_filters(th_all, cm_all)
 
@@ -1537,24 +2248,27 @@ def main() -> None:
     cm = cm_all[cm_all["thread_id"].isin(keep_ids)]
 
     st.sidebar.divider()
-    st.sidebar.metric("Threads selected", fmt_int(len(th)))
-    st.sidebar.metric("Comments selected", fmt_int(len(cm)))
+    st.sidebar.metric(t("sb.threads_selected"), fmt_int(len(th)))
+    st.sidebar.metric(t("sb.comments_selected"), fmt_int(len(cm)))
     st.sidebar.caption(
-        f"{len(th) / max(len(th_all), 1):.1%} of threads • "
-        f"{len(cm) / max(len(cm_all), 1):.1%} of comments"
+        t("sb.pct_of").format(
+            tp=f"{len(th) / max(len(th_all), 1):.1%}",
+            cp=f"{len(cm) / max(len(cm_all), 1):.1%}",
+        )
     )
-    if st.sidebar.button("🔄 Clear cached data", use_container_width=True):
+    if st.sidebar.button(t("sb.clear_cache"), use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
     pages = {
-        "📈 Overview": lambda: page_overview(th, cm, f),
-        "🧵 Threads": lambda: page_threads(th),
-        "💬 Comments": lambda: page_comments(th, cm, cm_text, f),
-        "👥 Authors": lambda: page_authors(th, cm),
-        "🏷️ Flairs": lambda: page_flairs(th),
-        "🕐 Timing": lambda: page_timing(th, cm),
-        "🎭 Sentiment": lambda: page_sentiment(sent, llm_sent),
+        f"📈 {t('nav.overview')}": lambda: page_overview(th, cm, f),
+        f"🧵 {t('nav.threads')}": lambda: page_threads(th),
+        f"💬 {t('nav.comments')}": lambda: page_comments(th, cm, cm_text, f),
+        f"👥 {t('nav.authors')}": lambda: page_authors(th, cm),
+        f"🏷️ {t('nav.flairs')}": lambda: page_flairs(th),
+        f"🕐 {t('nav.timing')}": lambda: page_timing(th, cm),
+        f"🎭 {t('nav.sentiment')}": lambda: page_sentiment(sent, llm_sent),
+        f"📖 {t('nav.methodology')}": lambda: page_methodology(th_all, cm_all),
     }
     tabs = st.tabs(list(pages.keys()))
     for tab, render in zip(tabs, pages.values()):
@@ -1565,10 +2279,11 @@ def main() -> None:
     if meta:
         s = meta.get("sources", {})
         st.caption(
-            f"Cache built {meta.get('built_at', '?')} • "
-            f"threads: {fmt_int(s.get('threads', {}).get('rows', 0))} • "
-            f"comments: {fmt_int(s.get('comments', {}).get('rows', 0))} • "
-            f"Built by `src/build_cache.py` — re-run it after the CSVs change."
+            t("ft.built").format(
+                at=meta.get("built_at", "?"),
+                th=fmt_int(s.get("threads", {}).get("rows", 0)),
+                cm=fmt_int(s.get("comments", {}).get("rows", 0)),
+            )
         )
 
 

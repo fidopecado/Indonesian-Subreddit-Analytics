@@ -82,6 +82,22 @@ modifies the raw CSVs. Regenerate the schema reference after a rebuild:
 - Flairs: live performance profile, normalized metric heatmap, and top-word/reference views.
 - Timing: WIB day/hour heatmaps for threads and comments, plus median replies and score per hour for organic threads.
 - Sentiment: full-corpus model labels, a 10,000-comment assistant-labeled reference, agreement/calibration analysis, flair and time breakdowns, and a disagreement explorer.
+- Methodology: an in-dashboard guide to the dataset, every page, three headline findings, and the interpretation traps.
+- Bilingual interface (Indonesian / English) — switch with the selector at the top of the sidebar.
+
+## Language / Bahasa
+
+The whole interface is translated; the **data never is** (flair names, sentiment
+values, author UUIDs and post titles stay as they are). Indonesian is the default
+because the dataset is Indonesian — set `DEFAULT_LANG = "en"` in `app.py` to flip it.
+
+Strings live in one place, the `STRINGS` dict in `app.py`, keyed by a dotted id
+with an `(Indonesian, English)` pair. `t("key")` looks one up; a missing key
+renders as the literal id rather than silently falling back, so gaps are visible
+instead of wrong. The Methodology page text is in `METHOD_DOC`.
+
+Some controls keep an internal id that is *not* translated and only localise the
+label (`format_func`), so switching language never resets your filter selection.
 
 ## Sentiment labeling
 
