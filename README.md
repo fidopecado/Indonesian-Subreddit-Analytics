@@ -181,6 +181,21 @@ opposite class-index orders.
 - **Sentiment sample** (`sentiment_model_comparison_sample.csv`) is 50–96 rows —
   illustrative only, never ground truth.
 
+## Theming
+
+The dashboard uses the **e-ink** grayscale colorscheme
+([`e-ink-colorscheme/e-ink.nvim`](https://github.com/e-ink-colorscheme/e-ink.nvim),
+light mode) with its Everforest red as the single signal accent, rendered as
+brutalist / engineering chrome: monospace type, 2px ink rules, hard offset
+shadows and zero border-radius.
+
+- The palette and stylesheet live in `app.py` (`EINK`, `EINK_RAMP`,
+  `EINK_CATEGORICAL`, `EINK_SEQ`, `CSS_TEMPLATE`) and every Plotly figure picks
+  them up through the shared `style()` helper.
+- The base theme (paper, ink, monospace font) is set in `.streamlit/config.toml`.
+- `docs/theme-preview.html` is a standalone swatch sheet of the palette and
+  components.
+
 ## Schema reference
 
 See **`docs/HEADER_MAP.md`** for the full, auto-generated column inventory, join

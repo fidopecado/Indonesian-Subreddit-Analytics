@@ -1,0 +1,11 @@
+# E-ink (grayscale) + brutalist/engineering theme.
+# Palette: github.com/e-ink-colorscheme/e-ink.nvim (light mode); the single
+# accent is that scheme's Everforest red. Deeper chrome (borders, shadows,
+# monospace, blueprint grid) is injected from app.py.
+[theme]
+base = "light"
+primaryColor = "#F85552"            # Everforest red (accent)
+backgroundColor = "#FBFBF9"         # paper
+secondaryBackgroundColor = "#EFEFED"  # raised panels
+textColor = "#333333"               # ink (e-ink ramp, darkest)
+font = "monospace"

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>e-ink · brutalist theme — swatch sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBFBF9; --panel:#EFEFED; --grid:#CCCCCC; --ink:#333333;
+    --ink-strong:#1A1A1A; --muted:#909090; --accent:#F85552;
+    --green:#8DA101; --blue:#3A94C5;
+    --mono:"IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  *{box-sizing:border-box;border-radius:0}
+  body{
+    margin:0;padding:2.2rem;color:var(--ink);font-family:var(--mono);
+    background-color:var(--paper);
+    background-image:linear-gradient(rgba(26,26,26,.05) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(26,26,26,.05) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  h1,h2,h3{text-transform:uppercase;letter-spacing:.09em;color:var(--ink-strong);margin:0}
+  h1{font-size:1.5rem;border-bottom:3px solid var(--ink-strong);padding-bottom:.4rem}
+  h2{font-size:.95rem;border-bottom:2px solid var(--ink-strong);padding-bottom:.3rem;margin:2rem 0 1rem}
+  h3{font-size:.8rem;border-left:8px solid var(--accent);padding-left:.55rem;margin:1.4rem 0 .7rem}
+  .sub{color:var(--muted);text-transform:uppercase;letter-spacing:.14em;font-size:.68rem;margin-top:.5rem}
+
+  .ramp{display:grid;grid-template-columns:repeat(16,1fr);gap:0;border:2px solid var(--ink-strong);box-shadow:4px 4px 0 0 var(--ink-strong)}
+  .ramp div{height:64px;display:flex;align-items:flex-end;justify-content:center;font-size:.6rem;padding-bottom:4px}
+
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .metric{background:var(--panel);border:2px solid var(--ink-strong);box-shadow:4px 4px 0 0 var(--ink-strong);padding:12px 14px}
+  .metric .lab{text-transform:uppercase;letter-spacing:.14em;font-size:.66rem;color:var(--muted)}
+  .metric .val{font-size:1.7rem;font-weight:700;color:var(--ink-strong);font-variant-numeric:tabular-nums}
+
+  .tabs{display:flex;border-bottom:2px solid var(--ink-strong)}
+  .tab{border:2px solid var(--ink-strong);border-bottom:none;margin-right:-2px;background:var(--panel);
+       padding:6px 14px;text-transform:uppercase;letter-spacing:.08em;font-size:.78rem}
+  .tab.active{background:var(--ink-strong);color:var(--paper)}
+
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  button{font-family:var(--mono);border:2px solid var(--ink-strong);background:var(--paper);color:var(--ink-strong);
+         text-transform:uppercase;letter-spacing:.1em;font-weight:600;padding:8px 16px;box-shadow:3px 3px 0 0 var(--ink-strong);cursor:pointer}
+  button.hover{background:var(--ink-strong);color:var(--paper)}
+  button.primary{background:var(--accent);color:#fff}
+  button.pressed{transform:translate(3px,3px);box-shadow:none}
+
+  input{font-family:var(--mono);border:2px solid var(--ink-strong);background:var(--paper);color:var(--ink-strong);
+        padding:7px 10px;box-shadow:2px 2px 0 0 var(--ink-strong);min-width:230px}
+
+  table{border-collapse:collapse;border:2px solid var(--ink-strong);box-shadow:4px 4px 0 0 var(--ink-strong);background:var(--paper)}
+  th,td{border-bottom:1px solid var(--grid);padding:6px 12px;text-align:left;font-size:.8rem;font-variant-numeric:tabular-nums}
+  th{background:var(--panel);text-transform:uppercase;letter-spacing:.08em;font-size:.68rem;color:var(--ink-strong)}
+
+  .note{border:2px solid var(--ink-strong);box-shadow:3px 3px 0 0 var(--ink-strong);background:var(--panel);padding:10px 14px;font-size:.8rem}
+  .swatch{border:2px solid var(--ink-strong);padding:10px 12px;font-size:.72rem;text-align:center;box-shadow:3px 3px 0 0 var(--ink-strong)}
+  .key{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px}
+</style>
+</head>
+<body>
+  <h1>e-ink · brutalist theme</h1>
+  <div class="sub">palette: github.com/e-ink-colorscheme/e-ink.nvim (light) &nbsp;·&nbsp; accent: everforest red #F85552 &nbsp;·&nbsp; chrome: brutalist / engineering</div>
+
+  <h2>01 — Monochrome ramp (16 steps)</h2>
+  <div class="ramp">
+    <div style="background:#CCCCCC;color:#333333">#CCCCCC</div>
+    <div style="background:#C2C2C2;color:#333333">#C2C2C2</div>
+    <div style="background:#B8B8B8;color:#333333">#B8B8B8</div>
+    <div style="background:#AEAEAE;color:#333333">#AEAEAE</div>
+    <div style="background:#A4A4A4;color:#333333">#A4A4A4</div>
+    <div style="background:#9A9A9A;color:#333333">#9A9A9A</div>
+    <div style="background:#909090;color:#FBFBF9">#909090</div>
+    <div style="background:#868686;color:#FBFBF9">#868686</div>
+    <div style="background:#7C7C7C;color:#FBFBF9">#7C7C7C</div>
+    <div style="background:#727272;color:#FBFBF9">#727272</div>
+    <div style="background:#686868;color:#FBFBF9">#686868</div>
+    <div style="background:#5E5E5E;color:#FBFBF9">#5E5E5E</div>
+    <div style="background:#545454;color:#FBFBF9">#545454</div>
+    <div style="background:#4A4A4A;color:#FBFBF9">#4A4A4A</div>
+    <div style="background:#474747;color:#FBFBF9">#474747</div>
+    <div style="background:#333333;color:#FBFBF9">#333333</div>
+  </div>
+
+  <h2>02 — Semantic tokens</h2>
+  <div class="key">
+    <div class="swatch" style="background:#FBFBF9">paper #FBFBF9</div>
+    <div class="swatch" style="background:#EFEFED">panel #EFEFED</div>
+    <div class="swatch" style="background:#333333;color:#FBFBF9">ink #333333</div>
+    <div class="swatch" style="background:#1A1A1A;color:#FBFBF9">rule #1A1A1A</div>
+    <div class="swatch" style="background:#F85552;color:#fff">accent #F85552</div>
+    <div class="swatch" style="background:#8DA101;color:#fff">positive #8DA101</div>
+    <div class="swatch" style="background:#909090;color:#fff">neutral #909090</div>
+  </div>
+
+  <h2>03 — Metric spec panels</h2>
+  <div class="metrics">
+    <div class="metric"><div class="lab">Threads</div><div class="val">12,976</div></div>
+    <div class="metric"><div class="lab">Comments</div><div class="val">728,522</div></div>
+    <div class="metric"><div class="lab">Cohen's kappa</div><div class="val">0.188</div></div>
+  </div>
+
+  <h2>04 — Tabs, buttons, inputs</h2>
+  <div class="tabs">
+    <div class="tab active">Overview</div><div class="tab">Threads</div><div class="tab">Comments</div><div class="tab">Sentiment</div>
+  </div>
+  <h3>buttons</h3>
+  <div class="row">
+    <button>Default</button>
+    <button class="hover">Hover</button>
+    <button class="pressed">Pressed</button>
+    <button class="primary">Primary</button>
+  </div>
+  <h3>input</h3>
+  <div class="row"><input value="author uuid contains…"></div>
+
+  <h2>05 — Ruled table</h2>
+  <table>
+    <tr><th>Flair</th><th>Threads</th><th>Avg score</th></tr>
+    <tr><td>Discussion</td><td>3,120</td><td>14.2</td></tr>
+    <tr><td>News</td><td>2,884</td><td>9.7</td></tr>
+    <tr><td>Ask Indonesian</td><td>1,205</td><td>11.3</td></tr>
+  </table>
+
+  <h2>06 — Notice block</h2>
+  <div class="note">Alerts, code blocks and expanders share the same 2px ink rule + offset shadow treatment.</div>
+</body>
+</html>
