@@ -74,13 +74,13 @@ modifies the raw CSVs. Regenerate the schema reference after a rebuild:
 
 ## Features
 
-- Reactive global filters: WIB date range, flair, author UUID, title search, score, comment threshold, post type, and moderation/content flags.
+- Reactive global filters: WIB date range, flair, author UUID, title search, score, comment threshold, post type, moderation/content flags, and an auto-posted-thread exclusion.
 - Overview: activity over time, flair distribution, score/comment relationships, and score distributions.
 - Threads: ranked thread explorer, title/body search, CSV export, and live flair comparisons.
 - Comments: comment activity, score and length distributions, top/bottom comments, and live thread-filter matching.
 - Authors: live filtered engagement leaderboard plus the static source leaderboard.
 - Flairs: live performance profile, normalized metric heatmap, and top-word/reference views.
-- Timing: WIB day/hour heatmaps for threads and comments.
+- Timing: WIB day/hour heatmaps for threads and comments, plus median replies and score per hour for organic threads.
 - Sentiment: full-corpus model labels, a 10,000-comment assistant-labeled reference, agreement/calibration analysis, flair and time breakdowns, and a disagreement explorer.
 
 ## Sentiment labeling
@@ -167,6 +167,27 @@ opposite class-index orders.
 - The comments body text is stored separately (`comments_text.parquet`) so aggregate views remain fast.
 - The pre-derived leaderboard, flair performance, flair top words, and hourly activity files are shown as static reference snapshots; the main dashboard views recompute from the cached source data.
 - Sentiment labels are sample-only and are not ground truth; the two models intentionally disagree.
+
+### Methodology notes
+
+- **Auto-posted threads are excluded from the timing analysis.** `Daily Chat
+  Thread`, `Weekend Chat Thread` and `Special Thread` are published by automod on
+  a fixed clock (07:00 WIB). They are only ~2% of threads but ~22% of all
+  comments, and *every* one of the top comment threads lands on the same hour —
+  so including them makes "best hour to post" mean "when automod runs" rather
+  than when an ordinary post earns replies. The sidebar **Exclude auto-posted
+  threads** toggle applies the same exclusion everywhere.
+- **Medians, not means, for per-thread outcomes.** Reply and score distributions
+  are heavy-tailed (score skew ≈ 3.9, maximum 4,040 against a p99 of 957), so one
+  viral thread moves a hourly *mean* by tens of points while the median barely
+  budges. The Timing page therefore plots median replies and median score per
+  hour, and overlays the mean as a marker so the tail stays visible.
+- **Comments inherit their thread's date filter.** Filtering is applied to
+  threads; comments are kept by `thread_id`. A comment posted *after* the
+  selected window still counts as long as its parent thread is inside it.
+- **The "Reference: WIB hourly activity file" chart is an all-time snapshot** and
+  deliberately ignores the sidebar filters — it is a fixed baseline to compare
+  the filtered live view against.
 
 ### Known coverage gaps (documented)
 

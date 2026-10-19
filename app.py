@@ -22,6 +22,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from plotly.subplots import make_subplots
 
 BASE = Path(__file__).resolve().parent
 CACHE = BASE / "data" / "cache"
@@ -36,6 +37,12 @@ st.set_page_config(
 NO_FLAIR = "No Flair"
 DOW_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 SENTIMENT_ORDER = ["positive", "neutral", "negative"]
+
+# Auto-posted / scheduled threads. Automod publishes these on a fixed clock, so
+# they behave nothing like organic posts: ~2% of threads but ~22% of all comments,
+# and every one of the top comment threads lands on the same hour (07:00 WIB).
+# Any "when should I post?" reading has to be able to exclude them.
+AUTO_POST_FLAIRS = {"Daily Chat Thread", "Weekend Chat Thread", "Special Thread"}
 
 # --------------------------------------------------------------------------- #
 # Theme — "e-ink" grayscale palette (github.com/e-ink-colorscheme/e-ink.nvim,
@@ -469,6 +476,14 @@ def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame) -> dict:
     f_spoil = c1.checkbox("Include spoilers", value=True)
     f_edited = c2.checkbox("Include edited", value=True)
 
+    st.sidebar.subheader("Content")
+    f_exclude_auto = st.sidebar.checkbox(
+        "Exclude auto-posted threads", value=False,
+        help="Daily Chat, Weekend Chat and Special Threads — posted by automod on a "
+             "fixed schedule. Only ~2% of threads but ~22% of all comments, so they "
+             "skew averages and any timing analysis.",
+    )
+
     post_type = st.sidebar.radio("Post type", ["All", "Text", "Link"], horizontal=True)
 
     min_comments = st.sidebar.number_input(
@@ -484,6 +499,7 @@ def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame) -> dict:
         "score_rng": score_rng,
         "f_nsfw": f_nsfw, "f_locked": f_locked, "f_mod": f_mod,
         "f_stick": f_stick, "f_spoil": f_spoil, "f_edited": f_edited,
+        "exclude_auto": f_exclude_auto,
         "post_type": post_type,
         "min_comments": int(min_comments),
     }
@@ -497,6 +513,9 @@ def apply_filters(th: pd.DataFrame, f: dict) -> pd.DataFrame:
 
     if f["flairs"]:
         d = d[d["link_flair_text"].isin(f["flairs"])]
+
+    if f.get("exclude_auto"):
+        d = d[~d["link_flair_text"].isin(AUTO_POST_FLAIRS)]
 
     if f["author_q"]:
         d = d[d["author"].astype(str).str.contains(f["author_q"], case=False, na=False)]
@@ -1099,6 +1118,12 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
         )
         fig.update_xaxes(dtick=2)
         st.plotly_chart(style(fig, 380), use_container_width=True, key="tm_heat_c")
+        st.caption(
+            "Comments ride along with their parent thread, so they are *not* date-filtered "
+            "individually — a thread inside the window can still contribute comments posted "
+            "after it. Hour 07:00 dominates because automod posts the Daily/Weekend Chat "
+            "Threads then."
+        )
 
     col1, col2 = st.columns(2)
     with col1:
@@ -1116,23 +1141,69 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
         fig.update_traces(marker_color="#7C7C7C")
         st.plotly_chart(style(fig, 330), use_container_width=True, key="tm_hour")
 
-    st.subheader("Best hours for engagement")
-    eng = (
-        t.groupby("hour").agg(threads=("thread_id", "count"), avg_score=("score", "mean"),
-                              avg_comments=("total_comments_actual", "mean"))
-        .reset_index()
-    )
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=eng["hour"], y=eng["avg_score"], mode="lines+markers",
-                             name="Avg thread score", line=dict(color=EINK["accent"], width=2)))
-    fig.add_trace(go.Bar(x=eng["hour"], y=eng["avg_comments"], name="Avg comments",
-                         marker_color=EINK["ink"], opacity=0.45, yaxis="y2"))
-    fig.update_layout(
-        xaxis=dict(title="Hour (WIB)", dtick=2),
-        yaxis=dict(title="Avg score"),
-        yaxis2=dict(title="Avg comments", overlaying="y", side="right", showgrid=False),
-    )
-    st.plotly_chart(style(fig, 380), use_container_width=True, key="tm_eng")
+    # ---- When do threads get replies? -------------------------------------
+    # Auto-posted chat threads are excluded here on purpose. They are published
+    # by automod at a fixed hour, so including them makes "best hour" mean "when
+    # automod runs" rather than when an ordinary post earns replies. Medians are
+    # used because replies/score are heavy-tailed: one viral thread moves an
+    # hourly mean by tens of points, while the median barely budges.
+    st.subheader("Replies & score per hour (organic threads)")
+    organic = t[~t["link_flair_text"].isin(AUTO_POST_FLAIRS)]
+    if organic.empty:
+        st.info("No organic threads for the current filters.")
+    else:
+        e = (
+            organic.groupby("hour")
+            .agg(
+                n=("thread_id", "count"),
+                med_comments=("total_comments_actual", "median"),
+                mean_comments=("total_comments_actual", "mean"),
+                med_score=("score", "median"),
+            )
+            .reindex(range(24)).fillna(0).reset_index()
+        )
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.10)
+        fig.add_trace(
+            go.Bar(
+                x=e["hour"], y=e["med_comments"], name="Median replies / thread",
+                marker_color=EINK["ink"], marker_line_width=0,
+                customdata=e[["n", "mean_comments"]],
+                hovertemplate="Hour %{x}:00 WIB<br>median %{y:.0f} replies<br>"
+                              "mean %{customdata[1]:.0f} · n=%{customdata[0]}<extra></extra>",
+            ), row=1, col=1,
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=e["hour"], y=e["mean_comments"], mode="markers",
+                name="Mean (viral-tail sensitive)",
+                marker=dict(color=EINK["accent"], size=8, symbol="diamond"),
+                hovertemplate="Hour %{x}:00 WIB<br>mean %{y:.0f} replies<extra></extra>",
+            ), row=1, col=1,
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=e["hour"], y=e["med_score"], mode="lines+markers",
+                name="Median score / thread",
+                line=dict(color=EINK["ink"], width=2), marker=dict(color=EINK["ink"], size=5),
+                hovertemplate="Hour %{x}:00 WIB<br>median score %{y:.0f}<extra></extra>",
+            ), row=2, col=1,
+        )
+        fig.update_yaxes(title_text="Replies / thread", row=1, col=1)
+        fig.update_yaxes(title_text="Score / thread", row=2, col=1)
+        fig.update_xaxes(dtick=2, row=1, col=1)
+        fig.update_xaxes(dtick=2, title_text="Hour (WIB)", row=2, col=1)
+        fig = style(fig, 540)
+        fig.update_layout(margin=dict(l=10, r=10, t=64, b=10))
+        st.plotly_chart(fig, use_container_width=True, key="tm_eng")
+
+        best = e.loc[e["med_comments"].idxmax()]
+        st.caption(
+            f"Median is the headline because the reply and score distributions are "
+            f"heavy-tailed; the red diamond is the mean, for contrast. Busiest hour: "
+            f"**{int(best['hour']):02d}:00 WIB** ({best['med_comments']:.0f} median replies). "
+            f"n = {int(e['n'].sum()):,} organic threads — auto-posted chat threads are "
+            f"excluded (tick *Exclude auto-posted threads* for the same view everywhere)."
+        )
 
     st.divider()
     st.subheader("Reference: WIB hourly activity file")
@@ -1140,7 +1211,9 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
     if wh.empty:
         st.warning("wib_hourly_activity.parquet not found in cache.")
     else:
-        st.info("Static snapshot from `wib_hourly_activity.csv` (full 7×24 grid).")
+        st.info("Static snapshot from `wib_hourly_activity.csv` (full 7×24 grid). "
+                "**All-time baseline — it deliberately does not follow the sidebar filters.** "
+                "Columns `total_comments` and `avg_score` also exist in the file but are not plotted here.")
         grid = (
             wh.pivot_table(index="wib_day_of_week", columns="wib_hour",
                            values="threads_count", aggfunc="sum")
