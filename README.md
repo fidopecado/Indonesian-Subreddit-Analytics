@@ -292,6 +292,10 @@ shadows and zero border-radius.
 - Top-level section headings use a left rule instead of a full-width underline,
   so no horizontal line ever sits across the top of a card row.
 - The base theme (paper, ink, monospace font) is set in `.streamlit/config.toml`.
+- **Streamlit is pinned** (`requirements.txt`) because the stylesheet targets its
+  widget DOM, which changes between minor releases: 1.66, for instance, replaces
+  the BaseWeb tabs/selects with react-aria components and silently drops most of
+  this theme. Bump the pin and the selectors in `CSS_TEMPLATE` together.
 - `docs/theme-preview.html` is a standalone swatch sheet of the palette and
   components.
 

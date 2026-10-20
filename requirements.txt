@@ -3,7 +3,12 @@
 #  src/make_batches.py, src/assemble_llm_labels.py, src/benchmark_sentiment.py).
 #
 # Install:  python -m pip install -r requirements.txt
-streamlit>=1.36,<2
+#
+# Streamlit is pinned on purpose: app.py themes the app with CSS that targets
+# the widget DOM, and Streamlit reworks that DOM between minor releases (1.66,
+# for example, replaced the BaseWeb tabs/selects the theme was written for).
+# Bump this together with the selectors in CSS_TEMPLATE, never on its own.
+streamlit==1.40.1
 pandas>=2.1,<3
 numpy>=1.26,<3
 plotly>=5.22,<6
