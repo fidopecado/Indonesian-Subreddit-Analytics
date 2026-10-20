@@ -78,7 +78,7 @@ Consequently:
 - The sidebar's **Build cache now** button works inside the container, as long as
   `data/raw/` is populated on the host.
 - The UI language default can be changed at runtime:
-  `DASHBOARD_LANG=en docker compose up` (or set it in `docker-compose.yml`).
+  `DASHBOARD_LANG=id docker compose up` (or set it in `docker-compose.yml`).
 - The GPU pipeline is **not** in this image (`requirements-gpu.txt` is a separate,
   much larger install); the dashboard only needs the precomputed parquet files.
 
@@ -130,9 +130,9 @@ modifies the raw CSVs. Regenerate the schema reference after a rebuild:
 ## Language / Bahasa
 
 The whole interface is translated; the **data never is** (flair names, sentiment
-values, author UUIDs and post titles stay as they are). Indonesian is the default
-because the dataset is Indonesian — set `DASHBOARD_LANG=en` (environment variable,
-handy in Docker) or `DEFAULT_LANG = "en"` in `app.py` to flip it.
+values, author UUIDs and post titles stay as they are). English is the default —
+set `DASHBOARD_LANG=id` (environment variable, handy in Docker) or change
+`DEFAULT_LANG` in `app.py` to flip it.
 
 Strings live in one place, the `STRINGS` dict in `app.py`, keyed by a dotted id
 with an `(Indonesian, English)` pair. `t("key")` looks one up; a missing key

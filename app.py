@@ -13,6 +13,7 @@ missing the app offers a one-click build in the sidebar.
 
 from __future__ import annotations
 
+import html
 import json
 import os
 from pathlib import Path
@@ -125,9 +126,9 @@ LANGS = {"id": "🇮🇩 Bahasa Indonesia", "en": "🇬🇧 English"}
 
 # Default UI language. Override with DASHBOARD_LANG=id|en — useful in Docker,
 # where it can be changed without rebuilding the image.
-DEFAULT_LANG = os.environ.get("DASHBOARD_LANG", "id")
+DEFAULT_LANG = os.environ.get("DASHBOARD_LANG", "en")
 if DEFAULT_LANG not in LANGS:
-    DEFAULT_LANG = "id"
+    DEFAULT_LANG = "en"
 
 def lang() -> str:
     return st.session_state.get("lang", DEFAULT_LANG)
@@ -273,6 +274,10 @@ STRINGS: dict[str, tuple[str, str]] = {
     "ov.monthly": ("Bulanan", "Monthly"),
     "ov.top_flairs": ("Flair teratas", "Top flairs"),
     "ov.score_vs_comments": ("Skor vs. komentar", "Score vs. comments"),
+    "ov.scatter_key": (
+        "Warna titik = flair — kuncinya di grafik Flair teratas (kiri).",
+        "Point colour = flair — key in the Top flairs chart (left).",
+    ),
     "ov.score_dist": ("Sebaran skor thread", "Distribution of thread scores"),
     # --------------------------------------------------------------- threads
     "th.title": ("Thread", "Threads"),
@@ -402,9 +407,9 @@ STRINGS: dict[str, tuple[str, str]] = {
                          "Replies & score per hour (organic threads)"),
     "tm.no_organic": ("Tidak ada thread organik untuk filter saat ini.",
                       "No organic threads for the current filters."),
-    "tm.trace_median_replies": ("Median balasan / thread", "Median replies / thread"),
-    "tm.trace_mean": ("Rata-rata (peka ekor viral)", "Mean (viral-tail sensitive)"),
-    "tm.trace_median_score": ("Median skor / thread", "Median score / thread"),
+    "tm.trace_median_replies": ("Median balasan", "Median replies"),
+    "tm.trace_mean": ("Rata-rata", "Mean replies"),
+    "tm.trace_median_score": ("Median skor", "Median score"),
     "tm.eng_caption": (
         "Median dipakai sebagai angka utama karena sebaran balasan dan skor berekor berat; "
         "belah ketupat merah adalah rata-ratanya, sebagai pembanding. Jam tersibuk: "
@@ -585,6 +590,19 @@ input, textarea, select, button, .stMarkdown, .stText, .stCaption {
 }
 [data-testid="stHeader"] { background: transparent !important; box-shadow: none !important; }
 #MainMenu, footer { visibility: hidden; }
+/* the "Deploy" chrome button belongs to Streamlit, not to this dashboard */
+[data-testid="stBaseButton-header"] { display: none !important; }
+/* the per-heading "copy link" anchor only adds visual noise here */
+[data-testid="stHeaderActionElements"] { display: none !important; }
+
+/* one grid for the whole page -------------------------------------------- */
+[data-testid="stMainBlockContainer"], .block-container {
+  padding: 3.1rem clamp(1rem, 2.1vw, 2.4rem) 4rem !important;
+  max-width: 1580px !important;
+  margin: 0 auto !important;
+}
+[data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] { gap: .9rem !important; }
+[data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"] { gap: 1rem !important; }
 
 /* typography -------------------------------------------------------------- */
 h1, h2, h3, h4, h5, h6 {
@@ -592,10 +610,33 @@ h1, h2, h3, h4, h5, h6 {
   text-transform: uppercase;
   letter-spacing: .09em;
   font-weight: 700 !important;
+  line-height: 1.25 !important;
 }
-h1 { border-bottom: 3px solid ${ink_strong}; padding-bottom: .35rem; margin-bottom: 1rem !important; }
-h2 { border-left: 6px solid ${ink_strong}; padding-left: .55rem; margin-bottom: .55rem !important; }
-h3 { border-left: 6px solid ${accent}; padding-left: .55rem; margin-bottom: .45rem !important; }
+h1 {
+  font-size: 1.5rem !important;
+  border-bottom: 3px solid ${ink_strong};
+  padding: 0 0 .4rem !important;
+  margin: 0 0 .8rem !important;
+}
+h2 {
+  font-size: 1.25rem !important;
+  border-left: 6px solid ${ink_strong};
+  padding: .3rem 0 .3rem .6rem !important;
+  margin: 0 0 .6rem !important;
+}
+h3 {
+  font-size: .94rem !important;
+  border-left: 6px solid ${accent};
+  padding: .28rem 0 .28rem .6rem !important;
+  margin: 1.1rem 0 .55rem !important;
+}
+/* Two charts side by side must start on the same baseline even when one
+   heading wraps and the other does not. */
+[data-testid="stMainBlockContainer"] h3 {
+  min-height: 2.95rem;
+  display: flex;
+  align-items: center;
+}
 p, li, span, label, blockquote { color: ${ink}; }
 a { color: ${ink_strong}; text-decoration: underline; text-underline-offset: 2px; }
 hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
@@ -605,38 +646,102 @@ hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
   background: ${panel} !important;
   border-right: 3px solid ${ink_strong};
 }
-[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 { border: 0 !important; padding-left: 0; }
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: .65rem !important; }
+[data-testid="stSidebar"] h1 {
+  font-size: 1.25rem !important;
+  border-bottom: 3px solid ${ink_strong} !important;
+  padding: 0 0 .45rem !important;
+  margin: 0 !important;
+}
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+  border-left: 0 !important;
+  padding-left: 0 !important;
+  margin: 0 !important;
+}
+[data-testid="stSidebar"] h3 {
+  font-size: .63rem !important;
+  letter-spacing: .17em;
+  color: ${muted} !important;
+  border-top: 2px solid ${ink_strong} !important;
+  padding: .6rem 0 0 !important;
+  margin-top: .5rem !important;
+}
 [data-testid="stSidebar"] .stCaption, [data-testid="stSidebar"] small {
   text-transform: uppercase; letter-spacing: .07em; color: ${muted} !important;
 }
+[data-testid="stSidebar"] label p, [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+  font-size: .72rem !important; letter-spacing: .04em;
+}
+[data-testid="stSidebar"] hr { margin: .35rem 0 !important; }
+
+/* 20+ selected flairs must not turn the sidebar into a 900px column of tags */
+[data-testid="stSidebar"] div:has(> [data-baseweb="tag"]) {
+  max-height: 8.5rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] {
+  font-size: .66rem !important;
+  letter-spacing: .03em;
+  padding: 2px 5px !important;
+  min-height: 22px !important;
+}
+
+/* the collapse chevron: Streamlit hides it on desktop, we want it back */
+[data-testid="stSidebarCollapseButton"] { display: flex !important; align-items: center; }
+[data-testid="stSidebarCollapsedControl"] { align-items: center; }
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebarCollapsedControl"] button {
+  width: 30px; height: 30px; min-width: 30px; min-height: 30px !important;
+  display: inline-flex !important; align-items: center; justify-content: center;
+  border: 2px solid ${ink_strong} !important; background: ${paper} !important;
+  color: ${ink_strong} !important; box-shadow: 2px 2px 0 0 ${ink_strong};
+}
+[data-testid="stSidebarCollapseButton"] button:hover,
+[data-testid="stSidebarCollapsedControl"] button:hover {
+  background: ${ink_strong} !important; color: ${paper} !important;
+}
+[data-testid="stSidebarCollapseButton"] svg,
+[data-testid="stSidebarCollapsedControl"] svg { fill: currentColor !important; }
 
 /* metrics as spec panels -------------------------------------------------- */
 [data-testid="stMetric"] {
   background: ${panel};
   border: 2px solid ${ink_strong};
   box-shadow: 4px 4px 0 0 ${ink_strong};
-  padding: 12px 14px 10px;
+  padding: .7rem .85rem .65rem;
+  height: 100%;
+  min-width: 0;
+  display: flex; flex-direction: column; justify-content: space-between; gap: .3rem;
 }
 [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] * {
-  text-transform: uppercase; letter-spacing: .14em;
-  font-size: .66rem !important; color: ${muted} !important;
+  text-transform: uppercase; letter-spacing: .13em; line-height: 1.3 !important;
+  font-size: .6rem !important; color: ${muted} !important;
 }
 [data-testid="stMetricValue"], [data-testid="stMetricValue"] * {
   font-weight: 700 !important; color: ${ink_strong} !important;
+  font-size: clamp(1.05rem, 1.5vw, 1.75rem) !important;
+  line-height: 1.1 !important;
   font-variant-numeric: tabular-nums;
 }
+[data-testid="stSidebar"] [data-testid="stMetric"] {
+  box-shadow: 2px 2px 0 0 ${ink_strong}; padding: .5rem .65rem;
+}
+[data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 1.15rem !important; }
+[data-testid="stSidebar"] [data-testid="stMetricLabel"] * { font-size: .55rem !important; }
 
 /* tabs -------------------------------------------------------------------- */
 .stTabs [data-baseweb="tab-list"] {
   gap: 0; border-bottom: 2px solid ${ink_strong}; background: transparent;
+  overflow-x: auto; scrollbar-width: thin;
 }
 .stTabs [data-baseweb="tab"] {
   border: 2px solid ${ink_strong}; border-bottom: none; margin-right: -2px;
   background: ${panel}; color: ${ink} !important;
-  text-transform: uppercase; letter-spacing: .08em; font-size: .78rem;
-  padding: 6px 14px; height: auto;
+  text-transform: uppercase; letter-spacing: .09em; font-size: .78rem;
+  padding: 10px 18px !important; height: auto !important; min-height: 44px;
 }
+.stTabs [data-baseweb="tab"]:hover { background: #F3F3F0 !important; }
 .stTabs [aria-selected="true"] { background: ${ink_strong} !important; color: ${paper} !important; }
 .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] { display: none !important; }
 
@@ -644,7 +749,9 @@ hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
 .stButton > button, .stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {
   border: 2px solid ${ink_strong} !important; background: ${paper} !important;
   color: ${ink_strong} !important; text-transform: uppercase; letter-spacing: .1em;
-  font-weight: 600 !important; box-shadow: 3px 3px 0 0 ${ink_strong};
+  font-size: .72rem !important; font-weight: 600 !important;
+  padding: .5rem 1.05rem !important; min-height: 38px;
+  box-shadow: 3px 3px 0 0 ${ink_strong};
   transition: none !important;
 }
 .stButton > button:hover, .stDownloadButton > button:hover {
@@ -663,7 +770,32 @@ hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
   border: 2px solid ${ink_strong} !important; background: ${paper} !important;
   box-shadow: 2px 2px 0 0 ${ink_strong}; color: ${ink_strong} !important;
 }
+[data-baseweb="select"] svg, [data-baseweb="select"] svg path {
+  fill: ${ink_strong} !important; color: ${ink_strong} !important;
+}
 [data-baseweb="tag"] { background: ${ink_strong} !important; color: ${paper} !important; border: none !important; }
+
+/* chart frames + compact legend ------------------------------------------ */
+[data-testid="stPlotlyChart"] {
+  background: ${paper};
+  outline: 2px solid ${ink_strong};
+  outline-offset: -2px;
+  box-shadow: 4px 4px 0 0 ${ink_strong};
+}
+[data-testid="stPlotlyChart"] .modebar { top: 0 !important; right: 0 !important; }
+.legend-strip {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: .28rem .9rem; padding: .1rem 0 .15rem;
+}
+.legend-strip .lg {
+  display: inline-flex; align-items: center; gap: .38rem;
+  font-size: .63rem; letter-spacing: .06em; text-transform: uppercase;
+  color: ${ink}; white-space: nowrap;
+}
+.legend-strip .lg i {
+  width: 10px; height: 10px; display: inline-block;
+  border: 1px solid ${ink_strong}; background: ${muted};
+}
 
 /* data surfaces ----------------------------------------------------------- */
 [data-testid="stDataFrame"], [data-testid="stTable"] {
@@ -806,37 +938,72 @@ def empty_fig(msg: str = "No data for the current filters") -> go.Figure:
 
 
 def style(fig: go.Figure, height: int = 340, **kw) -> go.Figure:
-    """Apply the e-ink / engineering look shared by every chart."""
-    fig.update_layout(
+    """Apply the e-ink / engineering look shared by every chart.
+
+    Keyword arguments are forwarded to ``update_layout``; ``margin=`` can be
+    passed here and replaces the default frame instead of colliding with it.
+    """
+    # Only reserve head-room when a legend will actually be drawn, so single
+    # series charts do not carry 40px of dead space above the plot.
+    legend_on = fig.layout.showlegend is not False and len(fig.data) > 1
+    layout = dict(
         height=height,
-        margin=dict(l=10, r=10, t=40, b=10),
+        margin=dict(l=8, r=14, t=56 if legend_on else 26, b=8),
         font=dict(family=EINK_MONO, size=12, color=EINK["ink"]),
         paper_bgcolor=EINK["paper"],
         plot_bgcolor=EINK["paper"],
         colorway=EINK_TOPICS,
         legend=dict(
-            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-            bgcolor="rgba(0,0,0,0)", bordercolor=EINK["ink_strong"], borderwidth=1,
-            font=dict(family=EINK_MONO, size=11, color=EINK["ink"]),
+            # Container coordinates, not paper ones: a legend anchored to the
+            # plot area slides right when automargin widens the y-axis gutter
+            # and then overflows the chart frame.
+            orientation="h", xref="container", x=0.01, xanchor="left",
+            yref="container", y=0.99, yanchor="top",
+            bgcolor="rgba(0,0,0,0)", borderwidth=0,
+            font=dict(family=EINK_MONO, size=10.5, color=EINK["ink"]),
+            itemsizing="constant",
         ),
         hoverlabel=dict(
             bgcolor=EINK["ink_strong"], bordercolor=EINK["ink_strong"],
             font=dict(family=EINK_MONO, color=EINK["paper"], size=12),
         ),
-        **kw,
     )
+    layout.update(kw)
+    fig.update_layout(**layout)
+    # automargin keeps long tick labels and axis titles from being clipped when
+    # the chart is squeezed into a narrow column.
     fig.update_xaxes(
         showgrid=False, linecolor=EINK["ink_strong"], linewidth=1.4, ticks="outside",
         tickcolor=EINK["ink_strong"], tickfont=dict(family=EINK_MONO, color=EINK["ink"]),
-        title_font=dict(family=EINK_MONO, color=EINK["ink"]),
+        title_font=dict(family=EINK_MONO, color=EINK["ink"]), automargin=True,
     )
     fig.update_yaxes(
         gridcolor=EINK["grid"], gridwidth=1, griddash="dot", zeroline=False,
         linecolor=EINK["ink_strong"], linewidth=1.4, ticks="outside",
         tickcolor=EINK["ink_strong"], tickfont=dict(family=EINK_MONO, color=EINK["ink"]),
-        title_font=dict(family=EINK_MONO, color=EINK["ink"]),
+        title_font=dict(family=EINK_MONO, color=EINK["ink"]), automargin=True,
     )
     return fig
+
+
+def legend_strip(labels, colors: dict) -> None:
+    """Print a compact, wrapping colour key for charts with many categories.
+
+    Plotly's own legend turns into a bordered block that spills over the plot
+    once a chart carries ~10+ categories, so those charts hide it and call this
+    instead: same colours in a fraction of the vertical space, wrapping with the
+    column instead of overflowing it. Rendered *below* the chart so side-by-side
+    charts still start on the same line.
+    """
+    labels = [lab for lab in labels if lab is not None and str(lab) != ""]
+    if not labels:
+        return
+    chips = "".join(
+        f'<span class="lg"><i style="background:{colors.get(lab, EINK["muted"])}"></i>'
+        f'{html.escape(str(lab))}</span>'
+        for lab in labels
+    )
+    st.markdown(f'<div class="legend-strip">{chips}</div>', unsafe_allow_html=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -1081,15 +1248,20 @@ def page_overview(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
     with col2:
         st.subheader(t("ov.score_vs_comments"))
         samp = th.sample(min(len(th), 3000), random_state=0) if len(th) > 3000 else th
+        pal = flair_palette()
         fig = px.scatter(
             samp, x="score", y="total_comments_actual", color="link_flair_text",
             opacity=0.6, labels={"score": t("lbl.thread_score"),
                                  "total_comments_actual": t("lbl.comments_actual"),
                                  "link_flair_text": t("lbl.flair")},
-            color_discrete_map=flair_palette(),
+            color_discrete_map=pal,
         )
         fig.update_traces(marker=dict(size=6))
+        fig.update_layout(showlegend=False)
         st.plotly_chart(style(fig, 430), use_container_width=True, key="ov_scatter")
+        # 24 flairs would need a legend taller than the chart itself; the bar
+        # chart on the left already prints the same colour key with its labels.
+        st.caption(t("ov.scatter_key"))
 
     st.subheader(t("ov.score_dist"))
     pos = th[th["score"] >= 0]["score"]
@@ -1553,7 +1725,9 @@ def page_flairs(th: pd.DataFrame) -> None:
                     labels={"count": t("lbl.occurrences"), "word": "", "flair": t("lbl.flair")},
                     color_discrete_map=flair_palette(),
                 )
+                fig.update_layout(showlegend=False)
                 st.plotly_chart(style(fig, max(400, 30 * len(selected) * 2)), use_container_width=True, key="fl_words")
+                legend_strip(selected, flair_palette())
             else:
                 st.info(t("fl.select_one"))
 
@@ -2234,7 +2408,7 @@ def main() -> None:
     # Language is picked first so the rest of the sidebar and every page below
     # render in it on the same run.
     st.sidebar.selectbox(
-        "Bahasa / Language",
+        "Language / Bahasa",
         options=list(LANGS),
         format_func=lambda k: LANGS[k],
         index=list(LANGS).index(lang()),
