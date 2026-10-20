@@ -21,6 +21,8 @@ services:
       - ./data:/app/data
     environment:
       TZ: Asia/Jakarta
-      # Uncomment to default the UI to English (runtime only, no rebuild):
-      # DASHBOARD_LANG: en
+      # Defaults for the UI, applied at runtime (no rebuild). The sidebar can
+      # always override them per session:
+      # DASHBOARD_LANG: id      # id | en  (English is the built-in default)
+      # DASHBOARD_THEME: dark   # light | dark (light is the built-in default)
     restart: unless-stopped

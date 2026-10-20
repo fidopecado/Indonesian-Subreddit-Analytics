@@ -79,6 +79,7 @@ Consequently:
   `data/raw/` is populated on the host.
 - The UI language default can be changed at runtime:
   `DASHBOARD_LANG=id docker compose up` (or set it in `docker-compose.yml`).
+- The theme default likewise: `DASHBOARD_THEME=dark docker compose up`.
 - The GPU pipeline is **not** in this image (`requirements-gpu.txt` is a separate,
   much larger install); the dashboard only needs the precomputed parquet files.
 
@@ -126,6 +127,8 @@ modifies the raw CSVs. Regenerate the schema reference after a rebuild:
 - Sentiment: full-corpus model labels, a 10,000-comment assistant-labeled reference, agreement/calibration analysis, flair and time breakdowns, and a disagreement explorer.
 - Methodology: an in-dashboard guide to the dataset, every page, three headline findings, and the interpretation traps.
 - Bilingual interface (Indonesian / English) — switch with the selector at the top of the sidebar.
+- Light and dark "e-ink" themes, switched live from the sidebar (no restart).
+- The whole filter state lives in the URL, so any view can be bookmarked or shared; **Reset filters** returns to the defaults.
 
 ## Language / Bahasa
 
@@ -141,6 +144,18 @@ instead of wrong. The Methodology page text is in `METHOD_DOC`.
 
 Some controls keep an internal id that is *not* translated and only localise the
 label (`format_func`), so switching language never resets your filter selection.
+The selected language is written to the URL (`?lang=id`), so a shared link opens
+in the language it was copied in.
+
+## Shareable views
+
+Every filter is mirrored into the address bar as you change it, and only
+*differences* from the defaults are encoded — a fresh dashboard has a clean URL.
+A link therefore restores the whole view: date preset or custom range, topics,
+score window, content flags, post type, minimum comments, search terms, language
+and theme. Browser back/forward walks through filter changes instead of leaving
+the app. **↺ Reset filters** (bottom of the sidebar) clears the URL and returns
+every control to its default.
 
 ## Sentiment labeling
 
@@ -269,7 +284,7 @@ light mode) with its Everforest red as the single signal accent, rendered as
 brutalist / engineering chrome: monospace type, 2px ink rules, hard offset
 shadows and zero border-radius.
 
-- The palette and stylesheet live in `app.py` (`EINK`, `EINK_RAMP`,
+- The palette and stylesheet live in `app.py` (`THEMES`, `EINK`, `EINK_RAMP`,
   `EINK_TOPICS`, `EINK_SEQ`, `CSS_TEMPLATE`) and every Plotly figure picks them
   up through the shared `style()` helper.
 - **Flair (topic) colours** come from `EINK_TOPICS` via `flair_palette()`, a
@@ -284,14 +299,28 @@ shadows and zero border-radius.
     heatmap, continuous engagement colour.
   - `EINK_SEQ_EMBER` — the comment-activity heatmap.
   - `EINK_SEQ` (neutral greyscale, paper → `#0D0D0D`) — the confusion matrix.
-  Every ramp starts at paper and is monotonic in lightness, so it stays on-theme
-  and remains legible in greyscale print.
+  Every ramp starts at the theme's paper and is monotonic in lightness, so it
+  stays on-theme and remains legible in greyscale print. In dark mode the ramps
+  are inverted (dark paper → light), because "more" has to mean *brighter*.
+- **Two inks, one role map.** `THEMES["light"]` is paper with dark ink,
+  `THEMES["dark"]` is a dark board with light ink; `apply_theme()` swaps the
+  palette *in place* at the top of every run, so charts, CSS and helpers that
+  captured a reference all follow. Hues (accent red, flair palette) are shared,
+  so a flair keeps its colour across a theme switch. The toggle sits under the
+  language selector; `DASHBOARD_THEME=dark` sets the default. Streamlit paints a
+  few canvas widgets (the data grid) from its server-side config, which cannot be
+  switched at runtime, so the grid is inverted in dark mode to sit on the board
+  instead of glowing white.
 - **Contrast:** anything drawn on an ink surface (active tab, multiselect tags,
   hover/pressed buttons, highlighted dropdown options) flips to paper text, so
   there is no dark-on-dark text.
 - Top-level section headings use a left rule instead of a full-width underline,
   so no horizontal line ever sits across the top of a card row.
 - The base theme (paper, ink, monospace font) is set in `.streamlit/config.toml`.
+  That file also sets `gatherUsageStats = false`: Streamlit 1.40 sends a
+  PageProfile telemetry message after every run whose handler can fire before the
+  session registers, popping a "Bad message format" modal on a fraction of new
+  sessions. Disabling usage stats removes the message (and the telemetry).
 - **Streamlit is pinned** (`requirements.txt`) because the stylesheet targets its
   widget DOM, which changes between minor releases: 1.66, for instance, replaces
   the BaseWeb tabs/selects with react-aria components and silently drops most of

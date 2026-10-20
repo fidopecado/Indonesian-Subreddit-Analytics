@@ -21,10 +21,13 @@ env/
 
 # ---------------------------------------------------------------------------
 # Data — never version large source data, caches, or derived artifacts.
-# Everything under these paths is reproducible from the pipeline or the raw
-# source CSVs (which live outside version control for size reasons).
+# Everything here is reproducible from the pipeline or the raw source CSVs.
+# `data/*` (instead of `data/`) keeps git descending into the folder, which is
+# what lets the handful of small reference tables at the bottom be re-included.
 # ---------------------------------------------------------------------------
-data/
+data/*
+!data/derived/
+data/derived/*
 artifacts/
 cache/
 *.parquet
@@ -45,3 +48,18 @@ cache/
 Thumbs.db
 Desktop.ini
 *.log
+
+# ---------------------------------------------------------------------------
+# Small reference tables — hand-checked, < 100 KB each, worth versioning so the
+# README's figures and the sentiment write-up can be traced back to their source.
+# These MUST come after the blanket `*.csv` rule: the last matching pattern wins.
+# Everything else in data/derived (multi-MB LLM dumps) stays ignored.
+# ---------------------------------------------------------------------------
+!data/derived/flair_performance.csv
+!data/derived/flair_top_words.csv
+!data/derived/gold_llm.csv
+!data/derived/wib_hourly_activity.csv
+!data/derived/author_leaderboard.csv
+!data/derived/sentiment_model_comparison_sample.csv
+!data/derived/sentiment_hf_vs_llm_10k.csv
+!data/derived/sentiment_hf_vs_llm_10k_disagreements.csv

@@ -29,6 +29,11 @@ from plotly.subplots import make_subplots
 BASE = Path(__file__).resolve().parent
 CACHE = BASE / "data" / "cache"
 
+# The stylesheet targets Streamlit 1.40's DOM (BaseWeb tabs, selects, tags).
+# Later releases swapped those widgets for react-aria, which silently drops
+# most of the theme — so the pin is asserted here and in requirements.txt.
+STREAMLIT_PIN = "1.40.1"
+
 st.set_page_config(
     page_title="r/indonesia Analytics",
     page_icon="📊",
@@ -46,23 +51,73 @@ SENTIMENT_ORDER = ["positive", "neutral", "negative"]
 # Any "when should I post?" reading has to be able to exclude them.
 AUTO_POST_FLAIRS = {"Daily Chat Thread", "Weekend Chat Thread", "Special Thread"}
 
-# --------------------------------------------------------------------------- #
-# Theme — "e-ink" grayscale palette (github.com/e-ink-colorscheme/e-ink.nvim,
-# light mode) with its Everforest accent, styled as brutalist / engineering
-# chrome: monospace, hard 2px rules, offset shadows, zero border-radius.
-# --------------------------------------------------------------------------- #
-EINK = {
-    "paper": "#FBFBF9",       # page
-    "panel": "#EFEFED",       # raised surfaces
-    "grid": "#CCCCCC",        # hairline grid (ramp step 1)
-    "ink": "#333333",         # body text / primary marks (ramp step 16)
-    "ink_strong": "#1A1A1A",  # rules, borders, headings
-    "muted": "#909090",       # secondary text (ramp step 7)
-    "accent": "#F85552",      # Everforest red — the single signal colour
-    "green": "#8DA101",
-    "blue": "#3A94C5",
-    "yellow": "#DFA000",
+# Quick-range presets. Ids stay stable across languages (only the label is
+# translated) so switching language never resets the selection, and so a URL
+# written in one language restores in the other.
+RANGE_PRESETS = {
+    "all": "sb.all_time", "d7": "sb.last7", "d30": "sb.last30",
+    "d90": "sb.last90", "custom": "sb.custom",
 }
+# Every widget key the filter sidebar owns. Kept in one place because the URL
+# restore and the reset button both have to clear exactly this set.
+FILTER_KEYS = (
+    "flt_preset", "flt_drange", "flt_flairs", "flt_author", "flt_title",
+    "flt_score", "flt_nsfw", "flt_locked", "flt_mod", "flt_stick",
+    "flt_spoil", "flt_edited", "flt_auto", "flt_ptype", "flt_minc",
+)
+
+# --------------------------------------------------------------------------- #
+# Theme — "e-ink" grayscale palette (github.com/e-ink-colorscheme/e-ink.nvim)
+# with its Everforest accent, styled as brutalist / engineering chrome:
+# monospace, hard 2px rules, offset shadows, zero border-radius.
+#
+# Two inks share the same *roles*, not the same values: "light" is paper with
+# dark ink, "dark" is a dark board with light ink. Hues (accent red, the flair
+# palette) stay put so a flair keeps its identity across a theme switch.
+# `EINK` is mutated in place by `apply_theme()` because every chart, page and
+# CSS block reads it at call time — no reload, no restart.
+# --------------------------------------------------------------------------- #
+THEMES: dict[str, dict[str, str]] = {
+    "light": {
+        "paper": "#FBFBF9",       # page
+        "panel": "#EFEFED",       # raised surfaces
+        "grid": "#CCCCCC",        # hairline grid (ramp step 1)
+        "ink": "#333333",         # body text / primary marks (ramp step 16)
+        "ink_strong": "#1A1A1A",  # rules, borders, headings
+        "muted": "#909090",       # secondary text (ramp step 7)
+        "accent": "#F85552",      # Everforest red — the single signal colour
+        "green": "#8DA101",
+        "blue": "#3A94C5",
+        "yellow": "#DFA000",
+        # de-emphasised greys used by charts for "everything else" series
+        "dim1": "#545454",
+        "dim2": "#7C7C7C",
+        "dim3": "#A4A4A4",
+        "hover": "#F3F3F0",       # tab hover wash
+        "blueprint": "rgba(26,26,26,.05)",   # page grid
+        "on_accent": "#FFFFFF",   # text on the accent fill
+    },
+    "dark": {
+        "paper": "#141414",
+        "panel": "#1F1F1F",
+        "grid": "#3A3A3A",
+        "ink": "#D6D6D1",
+        "ink_strong": "#F2F2EE",
+        "muted": "#8E8E8E",
+        "accent": "#F85552",
+        "green": "#A8BF3E",
+        "blue": "#5FB0DE",
+        "yellow": "#E8B54A",
+        "dim1": "#A6A6A6",
+        "dim2": "#7E7E7E",
+        "dim3": "#555555",
+        "hover": "#262626",
+        "blueprint": "rgba(255,255,255,.045)",
+        "on_accent": "#FFFFFF",
+    },
+}
+EINK: dict[str, str] = dict(THEMES["light"])
+
 # Monochrome ramp taken verbatim from the e-ink palette (light -> dark).
 EINK_RAMP = ["#CCCCCC", "#C2C2C2", "#B8B8B8", "#AEAEAE", "#A4A4A4", "#9A9A9A",
              "#909090", "#868686", "#7C7C7C", "#727272", "#686868", "#5E5E5E",
@@ -98,11 +153,25 @@ EINK_TOPICS = [
 # (heatmaps, continuous colour) get hue, so colour always carries information.
 # Each ramp starts at paper and is monotonic in lightness, so it still reads as
 # e-ink and stays legible if printed in greyscale.
-EINK_SEQ = [[0.0, "#FBFBF9"], [0.35, "#CCCCCC"], [0.7, "#5E5E5E"], [1.0, "#0D0D0D"]]      # neutral / fallback
-EINK_SEQ_BLUE = [[0.0, "#FBFBF9"], [0.2, "#E4EDF5"], [0.4, "#C2D6E8"],
-                 [0.6, "#8FB3D4"], [0.8, "#4A7FB0"], [1.0, "#17324F"]]                    # threads / neutral magnitude
-EINK_SEQ_EMBER = [[0.0, "#FBFBF9"], [0.2, "#F8E2D6"], [0.4, "#F2C3A6"],
-                  [0.6, "#E59468"], [0.8, "#D06A3C"], [1.0, "#7A2B1E"]]                   # comments
+SEQ_LIGHT = {
+    "neutral": [[0.0, "#FBFBF9"], [0.35, "#CCCCCC"], [0.7, "#5E5E5E"], [1.0, "#0D0D0D"]],
+    "blue": [[0.0, "#FBFBF9"], [0.2, "#E4EDF5"], [0.4, "#C2D6E8"],
+             [0.6, "#8FB3D4"], [0.8, "#4A7FB0"], [1.0, "#17324F"]],       # threads
+    "ember": [[0.0, "#FBFBF9"], [0.2, "#F8E2D6"], [0.4, "#F2C3A6"],
+              [0.6, "#E59468"], [0.8, "#D06A3C"], [1.0, "#7A2B1E"]],      # comments
+}
+# On a dark board "more" has to mean *brighter*, so the ramps run the other way:
+# they start at the dark paper and climb to light.
+SEQ_DARK = {
+    "neutral": [[0.0, "#141414"], [0.35, "#3E3E3E"], [0.7, "#9C9C9C"], [1.0, "#F2F2EE"]],
+    "blue": [[0.0, "#141414"], [0.2, "#132433"], [0.4, "#1E4059"],
+             [0.6, "#3A6E92"], [0.8, "#7FA9C8"], [1.0, "#DCE9F3"]],
+    "ember": [[0.0, "#141414"], [0.2, "#2E1610"], [0.4, "#5A2A1A"],
+              [0.6, "#9C4E2E"], [0.8, "#D08A62"], [1.0, "#F5DFD2"]],
+}
+EINK_SEQ = [list(r) for r in SEQ_LIGHT["neutral"]]        # neutral / fallback
+EINK_SEQ_BLUE = [list(r) for r in SEQ_LIGHT["blue"]]      # threads / neutral magnitude
+EINK_SEQ_EMBER = [list(r) for r in SEQ_LIGHT["ember"]]    # comments
 EINK_MONO = ('"IBM Plex Mono", ui-monospace, "Cascadia Mono", "JetBrains Mono", '
              'Consolas, "Courier New", monospace')
 
@@ -111,6 +180,35 @@ SENTIMENT_COLORS = {
     "neutral": EINK["muted"],
     "negative": EINK["accent"],
 }
+
+# Default theme. Override with DASHBOARD_THEME=light|dark — handy in Docker,
+# where it can change without rebuilding the image.
+DEFAULT_THEME = os.environ.get("DASHBOARD_THEME", "light")
+if DEFAULT_THEME not in THEMES:
+    DEFAULT_THEME = "light"
+
+
+def theme() -> str:
+    """Active theme id: sidebar toggle, then URL, then environment default."""
+    for key in ("theme_select", "theme"):
+        value = st.session_state.get(key)
+        if value in THEMES:
+            return value
+    return DEFAULT_THEME
+
+
+def apply_theme(name: str) -> None:
+    """Swap the live palette in place so every existing reference follows."""
+    palette = THEMES.get(name, THEMES["light"])
+    EINK.clear()
+    EINK.update(palette)
+    ramps = SEQ_DARK if name == "dark" else SEQ_LIGHT
+    for target, ramp in ((EINK_SEQ, "neutral"), (EINK_SEQ_BLUE, "blue"),
+                         (EINK_SEQ_EMBER, "ember")):
+        target[:] = [list(step) for step in ramps[ramp]]
+    SENTIMENT_COLORS.update(
+        positive=EINK["green"], neutral=EINK["muted"], negative=EINK["accent"],
+    )
 
 # --------------------------------------------------------------------------- #
 # i18n — the interface is bilingual (Indonesian / English).
@@ -171,17 +269,26 @@ STRINGS: dict[str, tuple[str, str]] = {
     "sb.topics_help": ("Semua flair dipilih secara bawaan kecuali yang sangat langka (<20 thread).",
                        "All flairs are selected by default except very rare ones (<20 threads)."),
     "sb.search": ("Pencarian", "Search"),
+    "sb.search_help": ("Cari berdasarkan UUID penulis atau judul thread.",
+                       "Filter by author UUID or thread title."),
+    "sb.theme": ("Tampilan", "Theme"),
+    "theme.light": ("☀ Terang", "☀ Light"),
+    "theme.dark": ("☾ Gelap", "☾ Dark"),
+    "sb.reset": ("↺ Atur ulang filter", "↺ Reset filters"),
+    "sb.url_hint": ("Tampilan ini tersimpan di URL — salin bilah alamat untuk membagikannya.",
+                    "This view lives in the URL — copy the address bar to share it."),
     "sb.author_q": ("UUID penulis mengandung", "Author UUID contains"),
     "sb.title_q": ("Judul mengandung", "Title contains"),
     "sb.thresholds": ("Ambang batas", "Thresholds"),
     "sb.thread_score": ("Skor thread", "Thread score"),
     "sb.flags": ("Penanda", "Flags"),
-    "sb.inc_nsfw": ("Sertakan NSFW", "Include NSFW"),
-    "sb.inc_locked": ("Sertakan terkunci", "Include locked"),
-    "sb.inc_mod": ("Sertakan kiriman mod", "Include mod posts"),
-    "sb.inc_stick": ("Sertakan tersemat", "Include stickied"),
-    "sb.inc_spoil": ("Sertakan spoiler", "Include spoilers"),
-    "sb.inc_edited": ("Sertakan yang diedit", "Include edited"),
+    "sb.flags_help": ("Sertakan thread dengan penanda ini:", "Include threads that are:"),
+    "sb.inc_nsfw": ("NSFW", "NSFW"),
+    "sb.inc_locked": ("Terkunci", "Locked"),
+    "sb.inc_mod": ("Kiriman mod", "Mod posts"),
+    "sb.inc_stick": ("Tersemat", "Stickied"),
+    "sb.inc_spoil": ("Spoiler", "Spoilers"),
+    "sb.inc_edited": ("Diedit", "Edited"),
     "sb.content": ("Konten", "Content"),
     "sb.exclude_auto": ("Kecualikan thread otomatis", "Exclude auto-posted threads"),
     "sb.exclude_auto_help": (
@@ -561,6 +668,14 @@ STRINGS: dict[str, tuple[str, str]] = {
     "msg.no_data": ("Tidak ada data untuk filter saat ini.", "No data for the current filters."),
     "msg.no_filter_hits": ("Tidak ada data untuk filter saat ini",
                            "No data for the current filters"),
+    "msg.pin": ("Streamlit {installed} terpasang, tetapi tema ini ditulis untuk "
+                "{pinned}. Setelah 1.40, widget Streamlit berganti implementasi "
+                "dan sebagian besar CSS tidak lagi berlaku — pasang ulang dengan "
+                "`pip install streamlit=={pinned}`.",
+                "Streamlit {installed} is installed, but this theme targets "
+                "{pinned}. Streamlit changed its widget internals after 1.40, so "
+                "much of the CSS no longer applies — reinstall with "
+                "`pip install streamlit=={pinned}`."),
     "ft.built": ("Cache dibangun {at} • thread: {th} • komentar: {cm} • Dibuat oleh "
                  "`src/build_cache.py` — jalankan ulang setelah CSV berubah.",
                  "Cache built {at} • threads: {th} • comments: {cm} • Built by "
@@ -583,8 +698,8 @@ input, textarea, select, button, .stMarkdown, .stText, .stCaption {
 .stApp, [data-testid="stAppViewContainer"] {
   background-color: ${paper} !important;
   background-image:
-    linear-gradient(rgba(26,26,26,.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(26,26,26,.05) 1px, transparent 1px);
+    linear-gradient(${blueprint} 1px, transparent 1px),
+    linear-gradient(90deg, ${blueprint} 1px, transparent 1px);
   background-size: 26px 26px;
   color: ${ink};
 }
@@ -741,7 +856,7 @@ hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
   text-transform: uppercase; letter-spacing: .09em; font-size: .78rem;
   padding: 10px 18px !important; height: auto !important; min-height: 44px;
 }
-.stTabs [data-baseweb="tab"]:hover { background: #F3F3F0 !important; }
+.stTabs [data-baseweb="tab"]:hover { background: ${hover} !important; }
 .stTabs [aria-selected="true"] { background: ${ink_strong} !important; color: ${paper} !important; }
 .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] { display: none !important; }
 
@@ -760,7 +875,7 @@ hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
 .stButton > button:active, .stDownloadButton > button:active {
   transform: translate(3px, 3px); box-shadow: none;
 }
-.stButton > button[kind="primary"] { background: ${accent} !important; color: #FFFFFF !important; }
+.stButton > button[kind="primary"] { background: ${accent} !important; color: ${on_accent} !important; }
 .stButton > button[kind="primary"]:hover { background: ${ink_strong} !important; }
 
 /* inputs ------------------------------------------------------------------ */
@@ -830,20 +945,62 @@ code, pre, [data-testid="stCodeBlock"] {
 [data-testid="stFormSubmitButton"] > button, [data-testid="stFormSubmitButton"] > button * {
   color: ${paper} !important;
 }
-ul[role="listbox"] li, ul[role="listbox"] li * { color: ${ink_strong} !important; }
+/* popovers, dropdowns and the calendar keep their own surface -------------- */
+[data-baseweb="popover"] > div, [data-baseweb="popover"] ul[role="listbox"] {
+  background: ${paper} !important;
+}
+ul[role="listbox"] li, ul[role="listbox"] li * { color: ${ink} !important; }
 ul[role="listbox"] li:hover, ul[role="listbox"] li:hover *,
 ul[role="listbox"] li[aria-selected="true"], ul[role="listbox"] li[aria-selected="true"] * {
   background-color: ${ink_strong} !important; color: ${paper} !important;
 }
+[data-baseweb="calendar"], [data-baseweb="calendar"] > div { background: ${paper} !important; }
+[data-baseweb="calendar"] div { color: ${ink} !important; }
+[data-baseweb="calendar"] [aria-selected="true"],
+[data-baseweb="calendar"] [aria-selected="true"] * {
+  background: ${ink_strong} !important; color: ${paper} !important;
+}
+
+/* checkboxes / radios — BaseWeb paints these from the server config theme, so
+   the unchecked box would stay a white square on a dark board. */
+[data-baseweb="checkbox"]:has(input:not(:checked)) > span,
+[data-baseweb="radio"]:has(input:not(:checked)) > div:first-child {
+  background: transparent !important; border: 2px solid ${muted} !important;
+}
+
+${extra}
 </style>
 """)
 
-CSS = CSS_TEMPLATE.substitute(
-    mono=EINK_MONO, paper=EINK["paper"], panel=EINK["panel"], ink=EINK["ink"],
-    ink_strong=EINK["ink_strong"], grid=EINK["grid"], muted=EINK["muted"],
-    accent=EINK["accent"],
-)
-st.markdown(CSS, unsafe_allow_html=True)
+def dark_css() -> str:
+    """Extra rules for the dark board.
+
+    Streamlit paints its canvas widgets (the data grid) from the server-side
+    config theme, which is fixed at launch, so the grid is inverted to sit on
+    the dark board instead of glowing white inside it.
+    """
+    return f"""
+html, .stApp {{ color-scheme: dark; }}
+[data-testid="stDataFrame"] {{ filter: invert(.93); }}
+[data-testid="stDataFrame"] * {{ font-variant-numeric: tabular-nums; }}
+[data-testid="stTooltipContent"] {{
+  background: {EINK["panel"]} !important; color: {EINK["ink"]} !important;
+  border: 2px solid {EINK["ink_strong"]} !important;
+}}
+[data-testid="stToast"] {{ background: {EINK["panel"]} !important; }}
+"""
+
+
+def inject_css() -> None:
+    """Render the stylesheet for the active theme (call once per run)."""
+    css = CSS_TEMPLATE.substitute(
+        mono=EINK_MONO, paper=EINK["paper"], panel=EINK["panel"], ink=EINK["ink"],
+        ink_strong=EINK["ink_strong"], grid=EINK["grid"], muted=EINK["muted"],
+        accent=EINK["accent"], hover=EINK["hover"], blueprint=EINK["blueprint"],
+        on_accent=EINK["on_accent"],
+        extra=dark_css() if theme() == "dark" else "",
+    )
+    st.markdown(css, unsafe_allow_html=True)
 
 # --------------------------------------------------------------------------- #
 # Cached data loading
@@ -967,6 +1124,10 @@ def style(fig: go.Figure, height: int = 340, **kw) -> go.Figure:
             bgcolor=EINK["ink_strong"], bordercolor=EINK["ink_strong"],
             font=dict(family=EINK_MONO, color=EINK["paper"], size=12),
         ),
+        # the modebar is drawn by Plotly, not CSS: theme it or it vanishes into
+        # the dark board (and stays invisible-ish on paper).
+        modebar=dict(bgcolor="rgba(0,0,0,0)", color=EINK["muted"],
+                     activecolor=EINK["accent"]),
     )
     layout.update(kw)
     fig.update_layout(**layout)
@@ -1020,27 +1181,195 @@ def date_bounds(df: pd.DataFrame, col: str) -> tuple[pd.Timestamp, pd.Timestamp]
     return pd.Timestamp(lo), pd.Timestamp(hi)
 
 
-def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame) -> dict:
+def filter_defaults(th: pd.DataFrame) -> dict:
+    """State a fresh session starts in.
+
+    Also the baseline the URL is diffed against, so a default view produces a
+    short — usually empty — query string, and only deviations are encoded.
+    """
+    bounds = date_bounds(th, "created_wib")
+    lo, hi = bounds if bounds else (None, None)
+    if th.empty:
+        flairs, counts = [], pd.Series(dtype=int)
+        smin = smax = 0
+        p99 = 0
+    else:
+        flairs = sorted(th["link_flair_text"].dropna().unique().tolist())
+        counts = th["link_flair_text"].value_counts()
+        smin, smax = int(th["score"].min()), int(th["score"].max())
+        p99 = min(smax, int(th["score"].quantile(0.99)))
+    return {
+        "lo": lo, "hi": hi, "flairs": flairs,
+        "default_flairs": [f for f in flairs if counts.get(f, 0) >= 20] or flairs,
+        "smin": smin, "smax": smax, "score": (smin, p99),
+        "preset": "all",
+    }
+
+
+def _qp(name: str) -> str | None:
+    """First value of a URL query parameter, or None."""
+    value = st.query_params.get(name)
+    if isinstance(value, list):
+        return value[0] if value else None
+    return value
+
+
+def _qp_signature() -> str:
+    return json.dumps(
+        {k: v for k, v in sorted(st.query_params.to_dict().items())}, sort_keys=True,
+    )
+
+
+def seed_filters(defaults: dict) -> None:
+    """URL -> widget state. Must run before the filter widgets are created.
+
+    A changed signature means the URL came from somewhere other than this run
+    (shared link, bookmark, browser back/forward), so every key is dropped
+    first and only the encoded ones are restored — otherwise Back would leave
+    the newer values in place.
+    """
+    signature = _qp_signature()
+    if st.session_state.get("_filters_sig") == signature:
+        return
+    st.session_state["_filters_sig"] = signature
+    for key in FILTER_KEYS:
+        st.session_state.pop(key, None)
+
+    preset = _qp("preset")
+    if preset in RANGE_PRESETS:
+        st.session_state["flt_preset"] = preset
+
+    d0, d1 = _qp("d0"), _qp("d1")
+    if d0 and d1 and defaults["lo"] is not None:
+        try:
+            lo, hi = defaults["lo"].date(), defaults["hi"].date()
+            start = max(lo, min(hi, pd.Timestamp(d0).date()))
+            end = max(lo, min(hi, pd.Timestamp(d1).date()))
+            st.session_state["flt_drange"] = (min(start, end), max(start, end))
+        except (ValueError, TypeError):
+            pass
+
+    raw_flairs = _qp("flairs")
+    if raw_flairs:
+        try:
+            wanted = json.loads(raw_flairs)
+        except (json.JSONDecodeError, TypeError):
+            wanted = None
+        if isinstance(wanted, list):
+            allowed = set(defaults["flairs"])
+            st.session_state["flt_flairs"] = [f for f in wanted
+                                              if isinstance(f, str) and f in allowed]
+
+    for param, key in (("author", "flt_author"), ("title", "flt_title")):
+        value = _qp(param)
+        if value is not None:
+            st.session_state[key] = value
+
+    raw_score = _qp("score")
+    if raw_score and "," in raw_score:
+        parts = raw_score.split(",")
+        if len(parts) == 2 and all(p.strip().isnumeric() for p in parts):
+            lo_b, hi_b = int(parts[0]), int(parts[1])
+            st.session_state["flt_score"] = (
+                max(defaults["smin"], min(defaults["smax"], lo_b)),
+                max(defaults["smin"], min(defaults["smax"], hi_b)),
+            )
+
+    for param, key in (("nsfw", "flt_nsfw"), ("locked", "flt_locked"),
+                       ("mod", "flt_mod"), ("stick", "flt_stick"),
+                       ("spoil", "flt_spoil"), ("edited", "flt_edited"),
+                       ("auto", "flt_auto")):
+        value = _qp(param)
+        if value is not None:
+            st.session_state[key] = value not in ("0", "false", "no")
+
+    post_type = _qp("ptype")
+    if post_type in ("All", "Text", "Link"):
+        st.session_state["flt_ptype"] = post_type
+
+    minc = _qp("minc")
+    if minc is not None and minc.lstrip("-").isdigit():
+        st.session_state["flt_minc"] = max(0, int(minc))
+
+
+def _url_params(state: dict, defaults: dict) -> dict:
+    """Encode only what differs from the defaults, as plain strings."""
+    params: dict[str, str] = {}
+    if state["preset"] != defaults["preset"]:
+        params["preset"] = state["preset"]
+    if state["preset"] == "custom" and state["start"] is not None:
+        params["d0"] = state["start"].date().isoformat()
+        # the filter end is exclusive (start of the next day); the URL is not
+        params["d1"] = (state["end"] - pd.Timedelta(days=1)).date().isoformat()
+    if state["flairs"] != defaults["default_flairs"]:
+        params["flairs"] = json.dumps(state["flairs"], ensure_ascii=False)
+    if state["author_q"]:
+        params["author"] = state["author_q"]
+    if state["text_q"]:
+        params["title"] = state["text_q"]
+    if tuple(state["score_rng"]) != tuple(defaults["score"]):
+        params["score"] = f"{state['score_rng'][0]},{state['score_rng'][1]}"
+    for param, key in (("nsfw", "f_nsfw"), ("locked", "f_locked"),
+                       ("mod", "f_mod"), ("stick", "f_stick"),
+                       ("spoil", "f_spoil"), ("edited", "f_edited")):
+        if not state[key]:
+            params[param] = "0"
+    if state["exclude_auto"]:
+        params["auto"] = "1"
+    if state["post_type"] != "All":
+        params["ptype"] = state["post_type"]
+    if state["min_comments"] > 0:
+        params["minc"] = str(state["min_comments"])
+    if lang() != DEFAULT_LANG:
+        params["lang"] = lang()
+    if theme() != DEFAULT_THEME:
+        params["theme"] = theme()
+    return params
+
+
+def _write_url(params: dict[str, str]) -> None:
+    """Mirror the filter state into the address bar so views are shareable."""
+    current: dict[str, str] = {}
+    for key, value in st.query_params.to_dict().items():
+        current[key] = value[0] if isinstance(value, list) and value else value
+    if current == params:
+        st.session_state["_filters_sig"] = _qp_signature()
+        return
+    for key in list(current):
+        if key not in params:
+            del st.query_params[key]
+    for key, value in params.items():
+        if current.get(key) != value:
+            st.query_params[key] = str(value)
+    st.session_state["_filters_sig"] = _qp_signature()
+
+
+def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame, defaults: dict) -> dict:
+    # A reset clears the URL and every filter key *before* the widgets exist in
+    # this run — touching widget state after creation is not allowed.
+    if st.session_state.pop("_reset_filters", False):
+        st.query_params.clear()
+        for key in FILTER_KEYS:
+            st.session_state.pop(key, None)
+        st.session_state["_filters_sig"] = None
+    seed_filters(defaults)
+
     st.sidebar.title(t("sb.filters"))
     st.sidebar.caption(t("sb.filters_help"))
 
     # ---- time range (driven by threads, the primary calendar) ----
     # Preset ids stay stable across languages so switching never resets the
     # selection; only the displayed label is translated.
-    QUICK_RANGES = {
-        "all": "sb.all_time", "d7": "sb.last7", "d30": "sb.last30",
-        "d90": "sb.last90", "custom": "sb.custom",
-    }
     st.sidebar.subheader(t("sb.time_range"))
-    bounds = date_bounds(th, "created_wib")
-    if bounds:
-        lo, hi = bounds
+    lo, hi = defaults["lo"], defaults["hi"]
+    if lo is not None:
         st.sidebar.caption(t("sb.spans").format(span=f"{fmt_date(lo)} → {fmt_date(hi)}"))
         preset = st.sidebar.selectbox(
             t("sb.quick_range"),
-            options=list(QUICK_RANGES),
-            format_func=lambda k: t(QUICK_RANGES[k]),
+            options=list(RANGE_PRESETS),
+            format_func=lambda k: t(RANGE_PRESETS[k]),
             index=0,
+            key="flt_preset",
         )
         spans = {"d7": 7, "d30": 30, "d90": 90}
         if preset in spans:
@@ -1051,7 +1380,7 @@ def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame) -> dict:
         else:
             picked = st.sidebar.date_input(
                 t("sb.custom_range"), value=(lo.date(), hi.date()),
-                min_value=lo.date(), max_value=hi.date(),
+                min_value=lo.date(), max_value=hi.date(), key="flt_drange",
             )
             if isinstance(picked, (tuple, list)) and len(picked) == 2:
                 start, end = pd.Timestamp(picked[0]), pd.Timestamp(picked[1]) + pd.Timedelta(days=1)
@@ -1060,67 +1389,72 @@ def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame) -> dict:
         if start > end:
             start, end = end, start
     else:
-        start = end = None
+        preset, start, end = "all", None, None
 
     st.sidebar.divider()
 
     # ---- flair ----
     st.sidebar.subheader(t("sb.flair"))
-    flairs = sorted(th["link_flair_text"].dropna().unique().tolist()) if not th.empty else []
-    counts = th["link_flair_text"].value_counts() if not th.empty else pd.Series(dtype=int)
-    default_flairs = [f for f in flairs if counts.get(f, 0) >= 20] or flairs
+    flairs = defaults["flairs"]
     sel_flairs = st.sidebar.multiselect(
-        t("sb.topics"), options=flairs, default=default_flairs,
-        help=t("sb.topics_help"),
+        t("sb.topics"), options=flairs, default=defaults["default_flairs"],
+        help=t("sb.topics_help"), key="flt_flairs",
     )
     if not sel_flairs:
         sel_flairs = flairs
 
     # ---- author / text ----
-    st.sidebar.subheader(t("sb.search"))
-    author_q = st.sidebar.text_input(t("sb.author_q"), "").strip()
-    text_q = st.sidebar.text_input(t("sb.title_q"), "").strip()
+    # Folded away by default: they are occasional drills, not part of the
+    # everyday filter loop, and two full-width inputs pushed the real filters
+    # below the fold. Opened automatically when a shared link carries a query.
+    search_open = bool(st.session_state.get("flt_author") or st.session_state.get("flt_title"))
+    with st.sidebar.expander(t("sb.search"), expanded=search_open):
+        st.caption(t("sb.search_help"))
+        author_q = st.text_input(t("sb.author_q"), key="flt_author")
+        text_q = st.text_input(t("sb.title_q"), key="flt_title")
+    author_q = (author_q or "").strip()
+    text_q = (text_q or "").strip()
 
     # ---- thresholds ----
     st.sidebar.subheader(t("sb.thresholds"))
     if not th.empty:
-        smin, smax = int(th["score"].min()), int(th["score"].max())
         score_rng = st.sidebar.slider(
-            t("sb.thread_score"), min_value=smin, max_value=smax,
-            value=(smin, min(smax, int(th["score"].quantile(0.99)))),
+            t("sb.thread_score"), min_value=defaults["smin"], max_value=defaults["smax"],
+            value=defaults["score"], key="flt_score",
         )
     else:
         score_rng = (0, 0)
 
     # ---- flags ----
     st.sidebar.subheader(t("sb.flags"))
+    st.sidebar.caption(t("sb.flags_help"))
     c1, c2 = st.sidebar.columns(2)
-    f_nsfw = c1.checkbox(t("sb.inc_nsfw"), value=True)
-    f_locked = c2.checkbox(t("sb.inc_locked"), value=True)
-    f_mod = c1.checkbox(t("sb.inc_mod"), value=True)
-    f_stick = c2.checkbox(t("sb.inc_stick"), value=True)
-    f_spoil = c1.checkbox(t("sb.inc_spoil"), value=True)
-    f_edited = c2.checkbox(t("sb.inc_edited"), value=True)
+    f_nsfw = c1.checkbox(t("sb.inc_nsfw"), value=True, key="flt_nsfw")
+    f_locked = c2.checkbox(t("sb.inc_locked"), value=True, key="flt_locked")
+    f_mod = c1.checkbox(t("sb.inc_mod"), value=True, key="flt_mod")
+    f_stick = c2.checkbox(t("sb.inc_stick"), value=True, key="flt_stick")
+    f_spoil = c1.checkbox(t("sb.inc_spoil"), value=True, key="flt_spoil")
+    f_edited = c2.checkbox(t("sb.inc_edited"), value=True, key="flt_edited")
 
     st.sidebar.subheader(t("sb.content"))
     f_exclude_auto = st.sidebar.checkbox(
         t("sb.exclude_auto"), value=False,
-        help=t("sb.exclude_auto_help"),
+        help=t("sb.exclude_auto_help"), key="flt_auto",
     )
 
     post_type = st.sidebar.radio(
-        t("sb.post_type"), options=["All", "Text", "Link"],
+        t("sb.post_type"), options=["All", "Text", "Link"], index=0,
         format_func=lambda v: {"All": t("sb.all"), "Text": t("sb.text"), "Link": t("sb.link")}[v],
-        horizontal=True,
+        horizontal=True, key="flt_ptype",
     )
 
     min_comments = st.sidebar.number_input(
         t("sb.min_comments"), min_value=0, value=0, step=5,
-        help=t("sb.min_comments_help"),
+        help=t("sb.min_comments_help"), key="flt_minc",
     )
 
-    return {
-        "start": start, "end": end,
+    state = {
+        "start": start, "end": end, "preset": preset,
         "flairs": sel_flairs,
         "author_q": author_q,
         "text_q": text_q,
@@ -1131,6 +1465,14 @@ def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame) -> dict:
         "post_type": post_type,
         "min_comments": int(min_comments),
     }
+    _write_url(_url_params(state, defaults))
+
+    st.sidebar.divider()
+    if st.sidebar.button(t("sb.reset"), use_container_width=True):
+        st.session_state["_reset_filters"] = True
+        st.rerun()
+    st.sidebar.caption(t("sb.url_hint"))
+    return state
 
 
 def apply_filters(th: pd.DataFrame, f: dict) -> pd.DataFrame:
@@ -1267,7 +1609,7 @@ def page_overview(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
     pos = th[th["score"] >= 0]["score"]
     fig = px.histogram(pos, nbins=60,
                        labels={"value": t("lbl.score"), "count": t("lbl.threads")})
-    fig.update_traces(marker_color="#545454")
+    fig.update_traces(marker_color=EINK["dim1"])
     fig.update_layout(showlegend=False, yaxis_title=t("lbl.threads"), xaxis_title=t("lbl.score"))
     st.plotly_chart(style(fig, 300), use_container_width=True, key="ov_hist")
 
@@ -1378,7 +1720,7 @@ def page_threads(th: pd.DataFrame) -> None:
             labels={m: metric_labels[m], "link_flair_text": ""},
             hover_data={"threads": True, "avg_score": ":.1f", "avg_comments": ":.1f"},
         )
-        fig.update_traces(marker_color="#A4A4A4")
+        fig.update_traces(marker_color=EINK["dim3"])
         st.plotly_chart(style(fig, max(340, 26 * len(g))), use_container_width=True, key="th_flair_bar")
 
         disp = g.copy()
@@ -1436,7 +1778,7 @@ def page_comments(th: pd.DataFrame, cm: pd.DataFrame, cm_text: pd.DataFrame, f: 
             clipped = cm["score"].clip(lo, hi)
             fig = px.histogram(clipped, nbins=60,
                                labels={"value": t("cm.score_axis"), "count": t("lbl.comments")})
-            fig.update_traces(marker_color="#545454")
+            fig.update_traces(marker_color=EINK["dim1"])
             fig.update_layout(showlegend=False, yaxis_title=t("lbl.comments"),
                               xaxis_title=t("lbl.score"))
             st.plotly_chart(style(fig, 320), use_container_width=True, key="cm_hist")
@@ -1446,7 +1788,7 @@ def page_comments(th: pd.DataFrame, cm: pd.DataFrame, cm_text: pd.DataFrame, f: 
             per = per[per > 0]
             fig = px.histogram(per, nbins=50,
                                labels={"value": t("cm.per_thread"), "count": t("lbl.threads")})
-            fig.update_traces(marker_color="#7C7C7C")
+            fig.update_traces(marker_color=EINK["dim2"])
             fig.update_layout(showlegend=False, yaxis_title=t("lbl.threads"),
                               xaxis_title=t("cm.per_thread"))
             st.plotly_chart(style(fig, 320), use_container_width=True, key="cm_per")
@@ -1491,7 +1833,7 @@ def page_comments(th: pd.DataFrame, cm: pd.DataFrame, cm_text: pd.DataFrame, f: 
         })
         fig = px.histogram(lw, x="words", nbins=60,
                            labels={"words": t("cm.words_per_comment"), "count": t("lbl.comments")})
-        fig.update_traces(marker_color="#A4A4A4")
+        fig.update_traces(marker_color=EINK["dim3"])
         fig.update_layout(showlegend=False, yaxis_title=t("lbl.comments"))
         st.plotly_chart(style(fig, 320), use_container_width=True, key="cm_len")
 
@@ -1565,7 +1907,7 @@ def page_authors(th: pd.DataFrame, cm: pd.DataFrame) -> None:
             labels={"threads": t("au.scatter_x"), "comments": t("au.scatter_y")},
             hover_name="author",
         )
-        fig.update_traces(marker=dict(color="#545454", opacity=0.75))
+        fig.update_traces(marker=dict(color=EINK["dim1"], opacity=0.75))
         st.plotly_chart(style(fig, 400), use_container_width=True, key="au_scatter")
 
         disp = top.copy()
@@ -1601,7 +1943,7 @@ def page_authors(th: pd.DataFrame, cm: pd.DataFrame) -> None:
             orientation="h",
             labels={"total_engagement_score": t("lbl.total_engagement"), "author": ""},
         )
-        fig.update_traces(marker_color="#545454")
+        fig.update_traces(marker_color=EINK["dim1"])
         st.plotly_chart(style(fig, 500), use_container_width=True, key="au_static")
 
         cm1, cm2 = st.columns(2)
@@ -1818,7 +2160,7 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
         g.columns = ["hour", "threads"]
         fig = px.bar(g, x="hour", y="threads",
                      labels={"hour": t("lbl.hour"), "threads": t("lbl.threads")})
-        fig.update_traces(marker_color="#7C7C7C")
+        fig.update_traces(marker_color=EINK["dim2"])
         st.plotly_chart(style(fig, 330), use_container_width=True, key="tm_hour")
 
     # ---- When do threads get replies? -------------------------------------
@@ -2374,6 +2716,19 @@ def page_methodology(th_all: pd.DataFrame, cm_all: pd.DataFrame) -> None:
 
 
 def main() -> None:
+    # Theme comes first: the stylesheet and every chart below read the live
+    # palette, and the toggle below only takes effect on the *next* run (which
+    # Streamlit triggers as soon as it changes), so resolve it up front.
+    if "theme_select" not in st.session_state:
+        shared_theme = _qp("theme")
+        if shared_theme in THEMES:
+            st.session_state["theme"] = shared_theme
+    apply_theme(theme())
+    inject_css()
+
+    if st.__version__ != STREAMLIT_PIN:
+        st.warning(t("msg.pin").format(installed=st.__version__, pinned=STREAMLIT_PIN))
+
     if not cache_ready():
         st.title(t("msg.no_cache_title"))
         st.error(t("msg.no_cache"))
@@ -2407,6 +2762,14 @@ def main() -> None:
 
     # Language is picked first so the rest of the sidebar and every page below
     # render in it on the same run.
+    st.sidebar.title("📊 r/indonesia")
+    if "lang_select" not in st.session_state:
+        shared_lang = _qp("lang")
+        if shared_lang in LANGS:
+            st.session_state["lang_select"] = shared_lang
+    # Seed the resolved language *before* anything translates, so a ?lang= link
+    # renders in its own language on the first run rather than the second.
+    st.session_state["lang"] = st.session_state.get("lang_select", lang())
     st.sidebar.selectbox(
         "Language / Bahasa",
         options=list(LANGS),
@@ -2416,10 +2779,20 @@ def main() -> None:
     )
     st.session_state["lang"] = st.session_state["lang_select"]
 
-    st.sidebar.title("📊 r/indonesia")
+    st.sidebar.radio(
+        t("sb.theme"),
+        options=list(THEMES),
+        format_func=lambda k: {"light": t("theme.light"), "dark": t("theme.dark")}[k],
+        index=list(THEMES).index(theme()),
+        horizontal=True,
+        key="theme_select",
+    )
+    st.session_state["theme"] = st.session_state["theme_select"]
+
     st.sidebar.caption(t("sb.subtitle"))
 
-    f = sidebar_filters(th_all, cm_all)
+    defaults = filter_defaults(th_all)
+    f = sidebar_filters(th_all, cm_all, defaults)
 
     th = apply_filters(th_all, f)
     # Comments are kept to the threads that survived filtering (join on thread_id).

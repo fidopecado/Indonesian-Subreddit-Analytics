@@ -9,3 +9,10 @@ backgroundColor = "#FBFBF9"         # paper
 secondaryBackgroundColor = "#EFEFED"  # raised panels
 textColor = "#333333"               # ink (e-ink ramp, darkest)
 font = "monospace"
+
+# Streamlit 1.40 sends a PageProfile telemetry message at the end of every run;
+# its frontend handler can fire before the session is registered and pops a
+# "Bad message format" modal on a fraction of fresh sessions. Turning usage
+# stats off removes the message (and the telemetry) entirely.
+[browser]
+gatherUsageStats = false
