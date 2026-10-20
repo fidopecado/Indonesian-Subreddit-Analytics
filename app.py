@@ -220,7 +220,7 @@ def apply_theme(name: str) -> None:
 # Keys are dotted ids. A missing key renders as the literal id, which makes
 # gaps obvious in the UI instead of silently falling back to the wrong language.
 # --------------------------------------------------------------------------- #
-LANGS = {"id": "🇮🇩 Bahasa Indonesia", "en": "🇬🇧 English"}
+LANGS = {"id": "Bahasa Indonesia", "en": "English"}
 
 # Default UI language. Override with DASHBOARD_LANG=id|en — useful in Docker,
 # where it can be changed without rebuilding the image.
@@ -252,7 +252,7 @@ STRINGS: dict[str, tuple[str, str]] = {
     "nav.methodology": ("Metodologi", "Methodology"),
     # ------------------------------------------------------------- sidebar
     "sb.subtitle": ("Dataset subreddit Indonesia", "Indonesian subreddit dataset"),
-    "sb.filters": ("🔎 Filter", "🔎 Filters"),
+    "sb.filters": ("Filter", "Filters"),
     "sb.filters_help": ("Setiap perubahan menyaring ulang data dan menyegarkan semua grafik.",
                         "Every change re-filters the data and refreshes all charts."),
     "sb.time_range": ("Rentang waktu", "Time range"),
@@ -279,7 +279,6 @@ STRINGS: dict[str, tuple[str, str]] = {
                     "This view lives in the URL — copy the address bar to share it."),
     "sb.author_q": ("UUID penulis mengandung", "Author UUID contains"),
     "sb.title_q": ("Judul mengandung", "Title contains"),
-    "sb.thresholds": ("Ambang batas", "Thresholds"),
     "sb.thread_score": ("Skor thread", "Thread score"),
     "sb.flags": ("Penanda", "Flags"),
     "sb.flags_help": ("Sertakan thread dengan penanda ini:", "Include threads that are:"),
@@ -719,6 +718,11 @@ input, textarea, select, button, .stMarkdown, .stText, .stCaption {
 [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] { gap: .9rem !important; }
 [data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"] { gap: 1rem !important; }
 
+/* Streamlit gives every markdown block a -16px bottom margin to cancel the
+   paragraph margin it assumes. Our headings carry their own padding + border,
+   so that negative margin drags the next widget straight into the rule. */
+[data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
+
 /* typography -------------------------------------------------------------- */
 h1, h2, h3, h4, h5, h6 {
   color: ${ink_strong} !important;
@@ -761,39 +765,69 @@ hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
   background: ${panel} !important;
   border-right: 3px solid ${ink_strong};
 }
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: .65rem !important; }
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: .5rem !important; }
 [data-testid="stSidebar"] h1 {
-  font-size: 1.25rem !important;
+  font-size: 1.2rem !important;
+  line-height: 1.3 !important;
   border-bottom: 3px solid ${ink_strong} !important;
   padding: 0 0 .45rem !important;
-  margin: 0 !important;
+  margin: 0 0 .15rem !important;
 }
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
   border-left: 0 !important;
   padding-left: 0 !important;
   margin: 0 !important;
 }
+/* One rule per section, sitting in the whitespace above its heading. */
 [data-testid="stSidebar"] h3 {
-  font-size: .63rem !important;
-  letter-spacing: .17em;
+  font-size: .6rem !important;
+  letter-spacing: .18em;
   color: ${muted} !important;
   border-top: 2px solid ${ink_strong} !important;
-  padding: .6rem 0 0 !important;
-  margin-top: .5rem !important;
+  padding: .55rem 0 0 !important;
+  line-height: 1.5 !important;
 }
-[data-testid="stSidebar"] .stCaption, [data-testid="stSidebar"] small {
-  text-transform: uppercase; letter-spacing: .07em; color: ${muted} !important;
+/* Sidebar captions carry data — date spans, help text — so they read as quiet
+   sentence-case notes instead of shouting every word. */
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {
+  text-transform: none !important;
+  letter-spacing: .01em !important;
+  font-size: .67rem !important;
+  line-height: 1.5 !important;
+  color: ${muted} !important;
 }
-[data-testid="stSidebar"] label p, [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
-  font-size: .72rem !important; letter-spacing: .04em;
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] { margin-bottom: .1rem !important; }
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+  font-size: .62rem !important;
+  letter-spacing: .13em !important;
+  line-height: 1.4 !important;
+  text-transform: uppercase;
+  color: ${muted} !important;
 }
-[data-testid="stSidebar"] hr { margin: .35rem 0 !important; }
+/* Ticked boxes are content, not captions: keep them sentence-cased and dark. */
+[data-testid="stSidebar"] [data-testid="stCheckbox"] [data-testid="stWidgetLabel"] p,
+[data-testid="stSidebar"] [data-testid="stCheckbox"] p {
+  text-transform: none !important;
+  letter-spacing: .01em !important;
+  font-size: .72rem !important;
+  color: ${ink} !important;
+}
+/* One control height for every widget in the column. */
+[data-testid="stSidebar"] [data-baseweb="select"] > div,
+[data-testid="stSidebar"] [data-baseweb="input"],
+[data-testid="stSidebar"] .stTextInput input,
+[data-testid="stSidebar"] .stNumberInput input,
+[data-testid="stSidebar"] .stDateInput input { min-height: 38px !important; }
+[data-testid="stSidebar"] hr { display: none !important; }
 
 /* 20+ selected flairs must not turn the sidebar into a 900px column of tags */
 [data-testid="stSidebar"] div:has(> [data-baseweb="tag"]) {
   max-height: 8.5rem;
   overflow-y: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+[data-testid="stSidebar"] div:has(> [data-baseweb="tag"])::-webkit-scrollbar {
+  display: none;
 }
 [data-testid="stSidebar"] [data-baseweb="tag"] {
   font-size: .66rem !important;
@@ -846,15 +880,19 @@ hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
 [data-testid="stSidebar"] [data-testid="stMetricLabel"] * { font-size: .55rem !important; }
 
 /* tabs -------------------------------------------------------------------- */
+/* Wrap instead of scroll: at narrow widths the strip becomes a second row of
+   tabs, so no tab is ever hidden and no scrollbar is ever drawn. */
 .stTabs [data-baseweb="tab-list"] {
   gap: 0; border-bottom: 2px solid ${ink_strong}; background: transparent;
-  overflow-x: auto; scrollbar-width: thin;
+  flex-wrap: wrap; align-content: flex-start; overflow: visible;
 }
 .stTabs [data-baseweb="tab"] {
-  border: 2px solid ${ink_strong}; border-bottom: none; margin-right: -2px;
+  border: 2px solid ${ink_strong}; border-bottom: none;
+  margin: 0 -2px -2px 0;              /* collapse the shared borders */
   background: ${panel}; color: ${ink} !important;
-  text-transform: uppercase; letter-spacing: .09em; font-size: .78rem;
-  padding: 10px 18px !important; height: auto !important; min-height: 44px;
+  text-transform: uppercase; letter-spacing: .04em; font-size: .7rem;
+  padding: 6px 9px !important; height: auto !important; min-height: 34px;
+  line-height: 1.2 !important; white-space: nowrap;
 }
 .stTabs [data-baseweb="tab"]:hover { background: ${hover} !important; }
 .stTabs [aria-selected="true"] { background: ${ink_strong} !important; color: ${paper} !important; }
@@ -1391,14 +1429,13 @@ def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame, defaults: dict) -> dict:
     else:
         preset, start, end = "all", None, None
 
-    st.sidebar.divider()
-
     # ---- flair ----
     st.sidebar.subheader(t("sb.flair"))
+    st.sidebar.caption(t("sb.topics_help"))
     flairs = defaults["flairs"]
     sel_flairs = st.sidebar.multiselect(
         t("sb.topics"), options=flairs, default=defaults["default_flairs"],
-        help=t("sb.topics_help"), key="flt_flairs",
+        label_visibility="collapsed", key="flt_flairs",
     )
     if not sel_flairs:
         sel_flairs = flairs
@@ -1416,11 +1453,12 @@ def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame, defaults: dict) -> dict:
     text_q = (text_q or "").strip()
 
     # ---- thresholds ----
-    st.sidebar.subheader(t("sb.thresholds"))
+    # The heading names the control, so the slider's own label would repeat it.
+    st.sidebar.subheader(t("sb.thread_score"))
     if not th.empty:
         score_rng = st.sidebar.slider(
             t("sb.thread_score"), min_value=defaults["smin"], max_value=defaults["smax"],
-            value=defaults["score"], key="flt_score",
+            value=defaults["score"], label_visibility="collapsed", key="flt_score",
         )
     else:
         score_rng = (0, 0)
@@ -1467,7 +1505,6 @@ def sidebar_filters(th: pd.DataFrame, cm: pd.DataFrame, defaults: dict) -> dict:
     }
     _write_url(_url_params(state, defaults))
 
-    st.sidebar.divider()
     if st.sidebar.button(t("sb.reset"), use_container_width=True):
         st.session_state["_reset_filters"] = True
         st.rerun()
@@ -2762,7 +2799,7 @@ def main() -> None:
 
     # Language is picked first so the rest of the sidebar and every page below
     # render in it on the same run.
-    st.sidebar.title("📊 r/indonesia")
+    st.sidebar.title("r/indonesia")
     if "lang_select" not in st.session_state:
         shared_lang = _qp("lang")
         if shared_lang in LANGS:
@@ -2799,7 +2836,6 @@ def main() -> None:
     keep_ids = set(th["thread_id"])
     cm = cm_all[cm_all["thread_id"].isin(keep_ids)]
 
-    st.sidebar.divider()
     st.sidebar.metric(t("sb.threads_selected"), fmt_int(len(th)))
     st.sidebar.metric(t("sb.comments_selected"), fmt_int(len(cm)))
     st.sidebar.caption(
@@ -2813,14 +2849,14 @@ def main() -> None:
         st.rerun()
 
     pages = {
-        f"📈 {t('nav.overview')}": lambda: page_overview(th, cm, f),
-        f"🧵 {t('nav.threads')}": lambda: page_threads(th),
-        f"💬 {t('nav.comments')}": lambda: page_comments(th, cm, cm_text, f),
-        f"👥 {t('nav.authors')}": lambda: page_authors(th, cm),
-        f"🏷️ {t('nav.flairs')}": lambda: page_flairs(th),
-        f"🕐 {t('nav.timing')}": lambda: page_timing(th, cm),
-        f"🎭 {t('nav.sentiment')}": lambda: page_sentiment(sent, llm_sent),
-        f"📖 {t('nav.methodology')}": lambda: page_methodology(th_all, cm_all),
+        t("nav.overview"): lambda: page_overview(th, cm, f),
+        t("nav.threads"): lambda: page_threads(th),
+        t("nav.comments"): lambda: page_comments(th, cm, cm_text, f),
+        t("nav.authors"): lambda: page_authors(th, cm),
+        t("nav.flairs"): lambda: page_flairs(th),
+        t("nav.timing"): lambda: page_timing(th, cm),
+        t("nav.sentiment"): lambda: page_sentiment(sent, llm_sent),
+        t("nav.methodology"): lambda: page_methodology(th_all, cm_all),
     }
     tabs = st.tabs(list(pages.keys()))
     for tab, render in zip(tabs, pages.values()):
