@@ -118,12 +118,6 @@ THEMES: dict[str, dict[str, str]] = {
 }
 EINK: dict[str, str] = dict(THEMES["light"])
 
-# Monochrome ramp taken verbatim from the e-ink palette (light -> dark).
-EINK_RAMP = ["#CCCCCC", "#C2C2C2", "#B8B8B8", "#AEAEAE", "#A4A4A4", "#9A9A9A",
-             "#909090", "#868686", "#7C7C7C", "#727272", "#686868", "#5E5E5E",
-             "#545454", "#4A4A4A", "#474747", "#333333"]
-EINK_CATEGORICAL = ["#333333", "#7C7C7C", "#A4A4A4", "#545454", "#909090",
-                    "#C2C2C2", "#686868", "#AEAEAE", "#4A4A4A", "#B8B8B8"]
 # Categorical colours for *topics* (flairs). The chrome stays e-ink, but flairs
 # need real hue separation to stay readable, so this is deliberately wider than
 # the monochrome ramp: muted enough to sit on paper, distinct enough to tell apart.
@@ -858,18 +852,18 @@ hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
   background: ${panel};
   border: 2px solid ${ink_strong};
   box-shadow: 4px 4px 0 0 ${ink_strong};
-  padding: .7rem .85rem .65rem;
+  padding: .6rem .7rem .55rem;
   height: 100%;
   min-width: 0;
   display: flex; flex-direction: column; justify-content: space-between; gap: .3rem;
 }
 [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] * {
-  text-transform: uppercase; letter-spacing: .13em; line-height: 1.3 !important;
-  font-size: .6rem !important; color: ${muted} !important;
+  text-transform: uppercase; letter-spacing: .08em; line-height: 1.3 !important;
+  font-size: .58rem !important; color: ${muted} !important;
 }
 [data-testid="stMetricValue"], [data-testid="stMetricValue"] * {
   font-weight: 700 !important; color: ${ink_strong} !important;
-  font-size: clamp(1.05rem, 1.5vw, 1.75rem) !important;
+  font-size: clamp(1rem, 1.35vw, 1.7rem) !important;
   line-height: 1.1 !important;
   font-variant-numeric: tabular-nums;
 }
@@ -927,6 +921,12 @@ hr { border: 0; border-top: 2px solid ${ink_strong}; margin: 1.1rem 0; }
   fill: ${ink_strong} !important; color: ${ink_strong} !important;
 }
 [data-baseweb="tag"] { background: ${ink_strong} !important; color: ${paper} !important; border: none !important; }
+/* BaseWeb paints empty-state text and input placeholders from the *server*
+   config theme, so on the dark board they come out grey-on-grey. */
+input::placeholder, textarea::placeholder { color: ${muted} !important; opacity: 1 !important; }
+[data-testid="stMultiSelect"]:not(:has([data-baseweb="tag"])) [data-baseweb="select"] * {
+  color: ${muted} !important;
+}
 
 /* chart frames + compact legend ------------------------------------------ */
 [data-testid="stPlotlyChart"] {
@@ -1000,10 +1000,31 @@ ul[role="listbox"] li[aria-selected="true"], ul[role="listbox"] li[aria-selected
 }
 
 /* checkboxes / radios — BaseWeb paints these from the server config theme, so
-   the unchecked box would stay a white square on a dark board. */
+   the unchecked box would stay a white square on a dark board. The radio's
+   *inner dot* is a separate div that BaseWeb fills white, which reads as a
+   white hole on paper and a white square on the dark board. */
 [data-baseweb="checkbox"]:has(input:not(:checked)) > span,
 [data-baseweb="radio"]:has(input:not(:checked)) > div:first-child {
   background: transparent !important; border: 2px solid ${muted} !important;
+}
+[data-baseweb="radio"]:has(input:not(:checked)) > div:first-child > div {
+  background: transparent !important;
+}
+
+/* numeric steppers: Streamlit ships them light-on-light, so they are a white
+   block with an invisible glyph on the dark board (and near-invisible on paper) */
+[data-testid="stNumberInputStepDown"], [data-testid="stNumberInputStepUp"] {
+  background: ${paper} !important; color: ${ink_strong} !important;
+  border-left: 2px solid ${ink_strong} !important; box-shadow: none !important;
+}
+[data-testid="stNumberInputStepDown"] svg, [data-testid="stNumberInputStepUp"] svg {
+  fill: currentColor !important; color: ${ink_strong} !important;
+}
+[data-testid="stNumberInputStepDown"]:hover, [data-testid="stNumberInputStepUp"]:hover {
+  background: ${ink_strong} !important; color: ${paper} !important;
+}
+[data-testid="stNumberInputStepDown"]:hover svg, [data-testid="stNumberInputStepUp"]:hover svg {
+  fill: ${paper} !important;
 }
 
 ${extra}
@@ -1019,7 +1040,9 @@ def dark_css() -> str:
     """
     return f"""
 html, .stApp {{ color-scheme: dark; }}
-[data-testid="stDataFrame"] {{ filter: invert(.93); }}
+/* Invert the canvas layer only: filtering the root would also invert the 2px
+   frame and offset shadow we draw on it, erasing the grid's border. */
+[data-testid="stDataFrame"] > div {{ filter: invert(.93); }}
 [data-testid="stDataFrame"] * {{ font-variant-numeric: tabular-nums; }}
 [data-testid="stTooltipContent"] {{
   background: {EINK["panel"]} !important; color: {EINK["ink"]} !important;
@@ -1169,6 +1192,18 @@ def style(fig: go.Figure, height: int = 340, **kw) -> go.Figure:
     )
     layout.update(kw)
     fig.update_layout(**layout)
+    # Colour bars: Plotly keeps its own grey (#808495) for their ticks and
+    # title, which stays dark-on-dark on the dark board. Theme them explicitly,
+    # on the layout axis *and* on each heatmap trace (px binds it per trace).
+    bar = dict(
+        tickfont=dict(family=EINK_MONO, color=EINK["ink"], size=10.5),
+        title=dict(font=dict(family=EINK_MONO, color=EINK["ink"], size=11)),
+        outlinewidth=1, outlinecolor=EINK["ink_strong"], thickness=12, len=0.9,
+    )
+    fig.update_layout(coloraxis_colorbar=bar)
+    for trace in fig.data:
+        if trace.type == "heatmap":
+            trace.update(colorbar=bar)
     # automargin keeps long tick labels and axis titles from being clipped when
     # the chart is squeezed into a narrow column.
     fig.update_xaxes(
@@ -2328,7 +2363,7 @@ def page_sentiment(sent: pd.DataFrame, llm_sent: pd.DataFrame | None = None) -> 
 
     fig = px.bar(
         cmp_df, x="label", y="share", color="series", barmode="group",
-        color_discrete_sequence=[EINK["accent"], EINK["ink"], "#9A9A9A"],
+        color_discrete_sequence=[EINK["accent"], EINK["ink"], EINK["dim2"]],
         labels={"label": "", "share": t("lbl.share"), "series": ""},
         category_orders={"label": order_l10n},
     )
