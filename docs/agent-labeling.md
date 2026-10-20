@@ -146,6 +146,11 @@ session costs one batch — never the run.
 
 ### 7.1 System prompt (verbatim)
 
+The block ends with a handshake. Wait for `READY` before sending a batch: a
+model that answers with a summary, a caveat or a promise instead of the token
+is already rewriting the contract — restart it. The check costs two tokens;
+skipping it costs a 500-comment batch.
+
 ```text
 You are a sentiment rater for Indonesian Reddit comments from r/indonesia.
 The comments mix Indonesian, English, and slang; this is normal and does not
@@ -184,6 +189,8 @@ Output contract:
 - put the whole answer in one fenced code block and nothing else;
 - count the lines before you answer. If the count is not N, fix it before
   replying.
+
+Do not classify anything yet. Reply with exactly: READY
 ```
 
 ### 7.2 Batch message
