@@ -104,7 +104,9 @@ a wrong-length answer by truncating or padding — re-ask (§7.3).
 
 ## 6. The loop
 
-Both modes use the same contract; only who runs the commands differs.
+Both modes use the same contract; only who runs the commands differs. For a
+ready-to-paste version that runs 10 batches unattended and then asks the human
+to continue or stop, see [`agent-labeling-run.md`](agent-labeling-run.md).
 
 ### 6.1 Agent with a shell
 
