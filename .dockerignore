@@ -1,0 +1,38 @@
+# Keep the build context small and the image reproducible: only code, theme and
+# the dependency lists are needed to build. Everything below is either mounted
+# at runtime, machine-local, or unnecessary inside the container.
+
+# --- version control / local tooling ---------------------------------------
+.git
+.gitattributes
+.gitignore
+.venv
+venv
+env
+__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# --- data: mounted at runtime, never baked in ------------------------------
+data
+artifacts
+cache
+*.parquet
+*.csv
+*.feather
+
+# --- model caches ----------------------------------------------------------
+.hf_cache
+.cache
+
+# --- docs and local notes not needed at runtime ----------------------------
+docs
+README.md
+requirements-gpu.txt
+
+# --- container files themselves --------------------------------------------
+Dockerfile
+docker-compose.yml
+.dockerignore

@@ -1,0 +1,26 @@
+# r/indonesia analytics dashboard
+#
+#   docker compose up --build      # build + run, then open http://localhost:8501
+#
+# The dataset stays on the host and is bind-mounted, so refreshing the cache
+# (or the raw CSVs) never requires rebuilding the image.
+
+services:
+  dashboard:
+    build:
+      context: .
+    image: r-indonesia-dashboard:latest
+    ports:
+      # Localhost only by default: the dashboard has no authentication. Change
+      # to "8501:8501" to expose it on the LAN, ideally behind a reverse proxy.
+      - "127.0.0.1:8501:8501"
+    volumes:
+      # Read access is all normal use needs. Write access is only required for
+      # the in-app "Build cache now" button, which runs src/build_cache.py and
+      # therefore also needs data/raw/ to be present.
+      - ./data:/app/data
+    environment:
+      TZ: Asia/Jakarta
+      # Uncomment to default the UI to English (runtime only, no rebuild):
+      # DASHBOARD_LANG: en
+    restart: unless-stopped

@@ -8,6 +8,9 @@ Interactive Streamlit dashboard + sentiment-labeling pipeline for the
 ```text
 .
 ├── app.py                     # Streamlit dashboard (entry point)
+├── Dockerfile                 # container image (code + deps only, no data)
+├── docker-compose.yml         # runs the image with ./data bind-mounted
+├── .dockerignore
 ├── requirements.txt           # dashboard / cache-build deps
 ├── requirements-gpu.txt       # torch + transformers deps for sentiment runs
 ├── docs/
@@ -57,6 +60,45 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
+## Run in Docker
+
+```powershell
+docker compose up --build
+```
+
+Then open `http://localhost:8501`. Build the cache first if you have not already
+(see *Quick start*) — the container mounts `./data`, it does not ship the dataset.
+
+The image carries code, dependencies and the in-app cache builders only. Data is
+bind-mounted at `./data:/app/data` because the parquet cache is ~150 MB and the
+raw CSVs ~400 MB: baking them in would make every data refresh an image rebuild.
+Consequently:
+
+- Refreshing the cache, or dropping in new raw CSVs, needs **no rebuild**.
+- The sidebar's **Build cache now** button works inside the container, as long as
+  `data/raw/` is populated on the host.
+- The UI language default can be changed at runtime:
+  `DASHBOARD_LANG=en docker compose up` (or set it in `docker-compose.yml`).
+- The GPU pipeline is **not** in this image (`requirements-gpu.txt` is a separate,
+  much larger install); the dashboard only needs the precomputed parquet files.
+
+Equivalent without Compose:
+
+```powershell
+docker build -t r-indonesia-dashboard .
+docker run --rm -p 127.0.0.1:8501:8501 -v "${PWD}\data:/app/data" r-indonesia-dashboard
+```
+
+The port binds to `127.0.0.1` on purpose: the dashboard has no authentication, so
+publishing it on `0.0.0.0` would expose the dataset browser to your whole network.
+Use `8501:8501` (or a reverse proxy) if you actually want that.
+
+The container runs as an unprivileged user (uid `10001`) and exposes a
+`/_stcore/health` healthcheck, so `docker ps` reports `healthy` once Streamlit is
+serving. On Linux hosts, make sure the uid can read `./data` — or let the app's
+own "cache missing" screen tell you the mount is wrong rather than a permissions
+error.
+
 ## Refreshing data
 
 The app reads the raw CSVs only through the cache layer. When the CSVs change:
@@ -89,7 +131,8 @@ modifies the raw CSVs. Regenerate the schema reference after a rebuild:
 
 The whole interface is translated; the **data never is** (flair names, sentiment
 values, author UUIDs and post titles stay as they are). Indonesian is the default
-because the dataset is Indonesian — set `DEFAULT_LANG = "en"` in `app.py` to flip it.
+because the dataset is Indonesian — set `DASHBOARD_LANG=en` (environment variable,
+handy in Docker) or `DEFAULT_LANG = "en"` in `app.py` to flip it.
 
 Strings live in one place, the `STRINGS` dict in `app.py`, keyed by a dotted id
 with an `(Indonesian, English)` pair. `t("key")` looks one up; a missing key

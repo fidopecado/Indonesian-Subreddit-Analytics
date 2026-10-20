@@ -14,6 +14,7 @@ missing the app offers a one-click build in the sidebar.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from string import Template
 
@@ -120,9 +121,13 @@ SENTIMENT_COLORS = {
 # Keys are dotted ids. A missing key renders as the literal id, which makes
 # gaps obvious in the UI instead of silently falling back to the wrong language.
 # --------------------------------------------------------------------------- #
-DEFAULT_LANG = "id"
 LANGS = {"id": "🇮🇩 Bahasa Indonesia", "en": "🇬🇧 English"}
 
+# Default UI language. Override with DASHBOARD_LANG=id|en — useful in Docker,
+# where it can be changed without rebuilding the image.
+DEFAULT_LANG = os.environ.get("DASHBOARD_LANG", "id")
+if DEFAULT_LANG not in LANGS:
+    DEFAULT_LANG = "id"
 
 def lang() -> str:
     return st.session_state.get("lang", DEFAULT_LANG)
