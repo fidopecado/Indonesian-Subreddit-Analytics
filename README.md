@@ -159,6 +159,11 @@ every control to its default.
 
 ## Sentiment labeling
 
+The rubric, the batch protocol and the prompt used by LLM raters are specified
+in [`docs/agent-labeling.md`](docs/agent-labeling.md): label space, ordered
+decision rules, anchors, output contract, validation, drift control, and how to
+keep a labeler blind to every other model's output.
+
 Three complementary artifacts:
 
 1. `data/cache/comment_sentiment_llm_10k.parquet` — exactly 10,000 unique comments

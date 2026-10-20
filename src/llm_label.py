@@ -48,17 +48,28 @@ def log(msg: str) -> None:
     print(msg, flush=True)
 
 
-def eligible() -> pd.DataFrame:
+def hf_ids() -> set:
+    """The ids the HF pass actually scored. Labeling the same ids is what makes
+    the two raters comparable; anything outside this set cannot be compared."""
+    p = CACHE / "sentiment_full_slim.parquet"
+    return set(pd.read_parquet(p, columns=["comment_id"])["comment_id"])
+
+
+def eligible(hf_only: bool = True) -> pd.DataFrame:
     """Comment ids in a stable, resumable order.
 
     The order is the md5 of the id, not row order: it is reproducible across
-    machines and does not drift when the cache is rebuilt.
+    machines and does not drift when the cache is rebuilt. That matters more
+    than it looks -- it means a prefix of the run is a *uniform random sample*
+    of the corpus, so stopping early still yields usable statistics.
     """
     core = pd.read_parquet(CACHE / "comments.parquet", columns=["comment_id", "word_count"])
     text = pd.read_parquet(CACHE / "comments_text.parquet", columns=["comment_id", "body"])
     d = core.merge(text, on="comment_id", how="inner").drop_duplicates("comment_id")
     d["body"] = d["body"].fillna("").astype(str).str.replace(r"\s+", " ", regex=True).str.strip()
     d = d[(d["body"].str.len() >= 2) & (d["word_count"] >= 2)]
+    if hf_only:
+        d = d[d["comment_id"].isin(hf_ids())]
     d["order"] = d["comment_id"].map(lambda s: hashlib.md5(str(s).encode()).hexdigest())
     return d.sort_values("order", kind="stable").reset_index(drop=True)
 
@@ -66,7 +77,7 @@ def eligible() -> pd.DataFrame:
 def load_cursor() -> dict:
     if CURSOR.exists():
         return json.loads(CURSOR.read_text(encoding="utf-8"))
-    return {"offset": 0, "batch": 0}
+    return {"batch": 0}
 
 
 def save_cursor(cursor: dict) -> None:
@@ -82,38 +93,40 @@ def load_labels() -> pd.DataFrame:
 
 
 def cmd_status(_: argparse.Namespace) -> None:
-    total = len(eligible())
+    target = len(eligible(hf_only=True))
+    everything = len(eligible(hf_only=False))
     lab = load_labels()
     cursor = load_cursor()
-    done = lab["comment_id"].nunique()
-    log(f"eligible comments : {total:,}")
-    log(f"labeled           : {done:,}  ({done / max(total, 1):.2%})")
-    log(f"cursor            : batch {cursor['batch']}, offset {cursor['offset']:,}")
+    done = len(set(lab["comment_id"]) & set(eligible(hf_only=True)["comment_id"]))
+    log(f"HF-labeled target : {target:,}  (the set to compare against)")
+    log(f"all eligible      : {everything:,}  (--all-eligible)")
+    log(f"labeled           : {done:,}  ({done / max(target, 1):.2%} of target)")
+    log(f"batch counter     : {cursor['batch']}")
     if done:
         mix = lab["label"].value_counts(normalize=True).sort_index()
         log("class mix         : " + ", ".join(f"{k} {v:.1%}" for k, v in mix.items()))
-    if done < total:
-        log(f"remaining         : {total - done:,}")
+    log(f"remaining         : {max(target - done, 0):,}")
 
 
 def cmd_next(args: argparse.Namespace) -> None:
-    total = len(eligible())
     cursor = load_cursor()
-    start = cursor["offset"]
-    if start >= total:
+    d = eligible(hf_only=not args.all_eligible)
+    done = set(load_labels()["comment_id"])
+    todo = d[~d["comment_id"].isin(done)]
+    if todo.empty:
         log("nothing left to label")
         return
-    d = eligible().iloc[start:start + args.n]
+    take = todo.iloc[:args.n]
     BATCHES.mkdir(parents=True, exist_ok=True)
     num = cursor["batch"] + 1
     txt = BATCHES / f"batch_{num:04d}.txt"
     csv = BATCHES / f"batch_{num:04d}.csv"
-    txt.write_text("\n".join(d["body"].tolist()), encoding="utf-8")
-    d[["comment_id", "body"]].to_csv(csv, index=False, encoding="utf-8")
-    log(f"batch {num}: {len(d)} comments  ({start:,} -> {start + len(d):,} of {total:,})")
+    txt.write_text("\n".join(take["body"].tolist()), encoding="utf-8")
+    take[["comment_id", "body"]].to_csv(csv, index=False, encoding="utf-8")
+    log(f"batch {num}: {len(take)} comments  ({len(done):,} labeled, {len(todo):,} left)")
     log(f"  bodies: {txt}")
     log(f"  ids   : {csv}")
-    log(f"answer with exactly {len(d)} characters from + - 0 ?")
+    log(f"answer with exactly {len(take)} characters from + - 0 ?")
 
 
 def cmd_commit(args: argparse.Namespace) -> None:
@@ -147,14 +160,23 @@ def cmd_commit(args: argparse.Namespace) -> None:
     os.replace(tmp, LABELS)
 
     cursor = load_cursor()
-    cursor["offset"] += len(batch)
-    cursor["batch"] = args.batch
+    cursor["batch"] = max(cursor["batch"], args.batch)
     save_cursor(cursor)
     log(f"committed batch {args.batch}: {len(new)} labels ({len(merged):,} total)")
     log("mix: " + ", ".join(f"{k} {v:.1%}" for k, v in new["label"].value_counts(normalize=True).sort_index().items()))
 
 
-def cmd_report(_: argparse.Namespace) -> None:
+def cohens_kappa(a: pd.Series, b: pd.Series, labels: str = "+-0") -> float:
+    pairs = pd.DataFrame({"a": a, "b": b}).dropna()
+    pairs = pairs[pairs["a"].isin(list(labels)) & pairs["b"].isin(list(labels))]
+    if pairs.empty:
+        return float("nan")
+    po = (pairs["a"] == pairs["b"]).mean()
+    pe = sum((pairs["a"] == c).mean() * (pairs["b"] == c).mean() for c in labels)
+    return (po - pe) / (1 - pe) if pe < 1 else float("nan")
+
+
+def cmd_report(args: argparse.Namespace) -> None:
     lab = load_labels()
     if lab.empty:
         sys.exit("no labels yet")
@@ -170,10 +192,31 @@ def cmd_report(_: argparse.Namespace) -> None:
     agree = (a == b).mean()
     log(f"overlap           : {len(m):,}")
     log(f"agreement         : {agree:.1%}")
-    log("confusion (assistant rows x HF cols):")
+    log(f"cohen's kappa     : {cohens_kappa(a, b):.3f}   (chance-corrected)")
+    log("confusion (labeler rows x HF cols):")
     ct = pd.crosstab(a, b).reindex(index=list("+-0?"), columns=list("+-0"), fill_value=0)
     log(ct.to_string())
-    log(f"assistant '?'     : {(a == '?').mean():.1%}")
+    log(f"labeler '?'       : {(a == '?').mean():.1%}")
+
+    # Per-class precision/recall of the *HF* model, treating this labeler as
+    # the reference. Precision = of the comments HF called X, how many really
+    # are X. Recall = of the comments that really are X, how many HF found.
+    log("HF per-class (labeler as reference):")
+    for c in "+-0":
+        tp = int(((a == c) & (b == c)).sum())
+        fp = int(((a != c) & (b == c)).sum())
+        fn = int(((a == c) & (b != c)).sum())
+        prec = tp / (tp + fp) if tp + fp else float("nan")
+        rec = tp / (tp + fn) if tp + fn else float("nan")
+        log(f"  {c}  precision {prec:6.1%}   recall {rec:6.1%}   (n={tp + fn})")
+
+    if args.drift:
+        log("per-batch class mix (a jump >10pp between batches is drift, not news):")
+        d = m.copy()
+        d["k"] = d["label"].map({**short, "+": "+", "-": "-", "0": "0", "?": "?"})
+        for batch, g in d.groupby("batch"):
+            mix = g["k"].value_counts(normalize=True).reindex(list("+-0?")).fillna(0)
+            log(f"  batch {int(batch):<3} n={len(g):<5} " + "  ".join(f"{c} {mix[c]:5.1%}" for c in "+-0?"))
 
 
 def main() -> None:
@@ -182,6 +225,8 @@ def main() -> None:
     sub.add_parser("status").set_defaults(func=cmd_status)
     p = sub.add_parser("next")
     p.add_argument("--n", type=int, default=120)
+    p.add_argument("--all-eligible", action="store_true",
+                   help="include comments the HF pass never scored (not comparable)")
     p.set_defaults(func=cmd_next)
     c = sub.add_parser("commit")
     c.add_argument("--batch", type=int, required=True)
@@ -189,7 +234,9 @@ def main() -> None:
     c.add_argument("--labels-file", default="")
     c.add_argument("--labeler", default="assistant")
     c.set_defaults(func=cmd_commit)
-    sub.add_parser("report").set_defaults(func=cmd_report)
+    r = sub.add_parser("report")
+    r.add_argument("--drift", action="store_true", help="per-batch class mix")
+    r.set_defaults(func=cmd_report)
     args = ap.parse_args()
     args.func(args)
 
