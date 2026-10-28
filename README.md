@@ -3,6 +3,22 @@
 Interactive Streamlit dashboard + sentiment-labeling pipeline for the
 **r/indonesia** dataset (~12,976 threads, ~728,522 comments).
 
+## Live demo
+
+Hosted on Streamlit Community Cloud from this repository (branch `master`,
+entry point `app.py`):
+
+**https://share.streamlit.io/deploy?repository=fidopecado/Indonesian-Subreddit-Analytics&branch=master&mainModule=app.py**
+
+The app loads the committed parquet cache directly, so the hosted instance needs
+no raw data and no pipeline run. The cache is versioned for exactly this reason:
+`data/raw/` and `artifacts/` stay ignored, but the handful of parquets
+`app.py` reads are committed (~143 MB, largest file 72 MB).
+
+It is sized to fit Streamlit Community Cloud's 1 GB ceiling - the peak resident
+set is ~0.71 GB, down from ~1.42 GB before the load path was reworked (see
+*Memory* below).
+
 ## Repository layout
 
 ```text
@@ -30,15 +46,17 @@ Interactive Streamlit dashboard + sentiment-labeling pipeline for the
 ├── data/
 │   ├── raw/                   # source CSVs (not versioned)
 │   ├── derived/               # aggregates + model outputs (not versioned)
-│   └── cache/                 # parquet the dashboard reads (not versioned)
+│   └── cache/                 # parquet the dashboard reads (versioned: the hosted demo has no raw data)
 └── artifacts/
     ├── label_batches/         # per-batch labeling inputs
     ├── labels_out/            # per-batch labeling outputs
     └── scratch/               # archived one-off review dumps (safe to delete)
 ```
 
-Only code and docs are version-controlled; `data/` and `artifacts/` are
-git-ignored (see `.gitignore`) because they are large or reproducible.
+Code, docs and the dashboard cache are version-controlled. `data/raw/`,
+`data/derived/` and `artifacts/` are git-ignored (see `.gitignore`) because they
+are large or reproducible; `data/cache/` is tracked file-by-file, only the
+parquets `app.py` loads.
 
 ## Quick start (Windows PowerShell)
 
@@ -280,6 +298,38 @@ opposite class-index orders.
   (the dashboard tolerates it, but joins should `drop_duplicates("comment_id")`).
 - **Sentiment sample** (`sentiment_model_comparison_sample.csv`) is 50–96 rows —
   illustrative only, never ground truth.
+
+## Memory
+
+Streamlit Community Cloud gives each app 1 GB of RAM, and the dashboard used to
+peak at ~1.42 GB, so it could not be hosted. The figures below come from driving
+a real server with headless Chrome and sampling the interpreter's working set
+(not `DataFrame.memory_usage`, which understates what the process holds):
+
+| | deep size of the frames | peak RSS |
+| --- | --- | --- |
+| before | 924 MB | 1423 MB |
+| after | 310 MB | 712 MB |
+
+What made the difference, in order of impact:
+
+- **Arrow-backed text.** `pd.read_parquet(..., dtype_backend="pyarrow")` keeps
+  strings in contiguous buffers instead of one Python object per value. At 728k
+  rows an object string column costs ~50 bytes per value, so `comments` alone
+  was 337 MB that way and is 104 MB now. Non-text columns are cast back to
+  numpy so every existing pandas/plotly path sees the dtypes it expects.
+- **`st.cache_resource` instead of `st.cache_data`.** `cache_data` keeps a
+  pickled copy of the value next to the live object, doubling the footprint.
+  Nothing mutates these frames in place, so sharing them is safe.
+- **Comment text is never resident.** `comments_text` is 146 MB and the only
+  rows ever displayed are the 15 highest and 15 lowest scoring comments, so
+  those bodies are read on demand. The file is sorted by `comment_id` in
+  2,000-row groups so the filter skips almost every row group: 48 ms, ~0 MB.
+- **Unused columns are dropped at load time**, worth ~49 MB on the cached frame
+  and the same again on the filtered copy.
+- **Charts are pre-binned.** The score and word-count histograms hand plotly 60
+  bars instead of 705k raw values, and the volume/heatmap aggregations build
+  two-column stand-ins rather than copying all 16 columns to touch two of them.
 
 ## Theming
 
