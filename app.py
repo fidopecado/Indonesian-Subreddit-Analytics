@@ -1090,10 +1090,11 @@ def load(name: str) -> pd.DataFrame:
 
     At 728k rows every string column costs ~50 bytes of Python object overhead
     per value, so `comments` alone is 337 MB that way. Reading with the Arrow
-    backend keeps the text in contiguous buffers instead - 151 MB for the same
-    frame, and no per-value objects to churn through during reloads. Everything
-    that is not text is cast back to numpy so the existing pandas and plotly
-    code paths see exactly the dtypes they were written against.
+    backend keeps the text in contiguous buffers instead - 104 MB for the same
+    frame once the columns no page reads are dropped below, and no per-value
+    objects to churn through during reloads. Everything that is not text is
+    cast back to numpy so the existing pandas and plotly code paths see exactly
+    the dtypes they were written against.
 
     `cache_resource` rather than `cache_data` for the same reason: cache_data
     keeps a pickled copy of the value next to the live one. Nothing mutates
