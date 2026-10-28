@@ -63,3 +63,33 @@ Desktop.ini
 !data/derived/sentiment_model_comparison_sample.csv
 !data/derived/sentiment_hf_vs_llm_10k.csv
 !data/derived/sentiment_hf_vs_llm_10k_disagreements.csv
+
+# ---------------------------------------------------------------------------
+# Dashboard cache - committed on purpose.
+# The hosted demo (Streamlit Community Cloud) has no raw data and no compute to
+# rebuild from, so the parquets the dashboard actually reads are versioned here.
+# Only what app.py loads is listed: run
+#   grep -o 'load("[a-z_0-9]*")' app.py
+# to see the set. Everything else in data/cache stays ignored, as do data/raw,
+# data/derived and artifacts/. These MUST come after the `data/*`, `data/cache/*`
+# and `*.parquet` rules: the last matching pattern wins.
+# ---------------------------------------------------------------------------
+!data/cache/
+data/cache/*
+!data/cache/threads.parquet
+!data/cache/comments.parquet
+!data/cache/comments_text.parquet
+!data/cache/sentiment.parquet
+!data/cache/sentiment_full_slim.parquet
+!data/cache/sentiment_hf_10k.parquet
+!data/cache/sentiment_compare_10k.parquet
+!data/cache/sentiment_by_flair.parquet
+!data/cache/sentiment_by_flair_month.parquet
+!data/cache/comment_sentiment_llm_10k.parquet
+!data/cache/author_leaderboard.parquet
+!data/cache/flair_performance.parquet
+!data/cache/flair_top_words.parquet
+!data/cache/wib_hourly_activity.parquet
+!data/cache/meta.json
+!data/cache/sentiment_overview.json
+!data/cache/sentiment_router_gold40.benchmark.json

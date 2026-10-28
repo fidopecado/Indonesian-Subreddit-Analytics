@@ -1,0 +1,253 @@
+{
+  "generated_by": "build_sentiment_cache.py",
+  "full_corpus": {
+    "rows": 678522,
+    "unique_comment_ids": 678522,
+    "distribution": {
+      "negative": 457733,
+      "positive": 111477,
+      "neutral": 109312
+    },
+    "distribution_pct": {
+      "negative": 0.674603,
+      "positive": 0.164294,
+      "neutral": 0.161103
+    },
+    "mean_confidence": 0.835138,
+    "low_confidence_lt_0_6": 0.141704,
+    "route_distribution": {
+      "id": 590756,
+      "en": 87766
+    },
+    "flairs": 35,
+    "month_min": "2025-12",
+    "month_max": "2026-10"
+  },
+  "hf_10k_sample": {
+    "rows": 10000,
+    "distribution": {
+      "negative": 6747,
+      "positive": 1647,
+      "neutral": 1606
+    }
+  },
+  "llm_10k_sample": {
+    "rows": 10000,
+    "distribution": {
+      "neutral": 5639,
+      "negative": 3280,
+      "positive": 1081
+    }
+  },
+  "comparison_full_run_vs_llm_10k": {
+    "matched_rows": 10000,
+    "exact_agreement": 0.4553,
+    "cohen_kappa": 0.188419,
+    "disagreements": 5447,
+    "reference_distribution": {
+      "neutral": 5639,
+      "negative": 3280,
+      "positive": 1081
+    },
+    "model_distribution": {
+      "negative": 6784,
+      "positive": 1646,
+      "neutral": 1570
+    },
+    "per_label_vs_reference": [
+      {
+        "label": "negative",
+        "support": 3280,
+        "precision": 0.4138,
+        "recall": 0.8558,
+        "f1": 0.5578
+      },
+      {
+        "label": "neutral",
+        "support": 5639,
+        "precision": 0.7573,
+        "recall": 0.2109,
+        "f1": 0.3299
+      },
+      {
+        "label": "positive",
+        "support": 1081,
+        "precision": 0.3384,
+        "recall": 0.5153,
+        "f1": 0.4085
+      }
+    ],
+    "confusion_matrix": {
+      "negative": {
+        "negative": 2807,
+        "neutral": 241,
+        "positive": 232
+      },
+      "neutral": {
+        "negative": 3593,
+        "neutral": 1189,
+        "positive": 857
+      },
+      "positive": {
+        "negative": 384,
+        "neutral": 140,
+        "positive": 557
+      }
+    },
+    "agreement_by_confidence": {
+      "<0.60": {
+        "n": 1403,
+        "agreement": 0.364932
+      },
+      "0.60-0.70": {
+        "n": 1010,
+        "agreement": 0.4
+      },
+      "0.70-0.80": {
+        "n": 1075,
+        "agreement": 0.408372
+      },
+      "0.80-0.90": {
+        "n": 1513,
+        "agreement": 0.423662
+      },
+      "0.90-1.00": {
+        "n": 4999,
+        "agreement": 0.511502
+      }
+    },
+    "agreement_by_route": {
+      "en": {
+        "n": 1303,
+        "agreement": 0.677667,
+        "mean_confidence": 0.715472
+      },
+      "id": {
+        "n": 8697,
+        "agreement": 0.421985,
+        "mean_confidence": 0.852958
+      }
+    }
+  },
+  "comparison_hf10k_vs_llm_10k": {
+    "matched_rows": 163,
+    "exact_agreement": 0.368098,
+    "cohen_kappa": 0.111505,
+    "disagreements": 103,
+    "reference_distribution": {
+      "neutral": 99,
+      "negative": 48,
+      "positive": 16
+    },
+    "model_distribution": {
+      "negative": 109,
+      "positive": 35,
+      "neutral": 19
+    },
+    "per_label_vs_reference": [
+      {
+        "label": "negative",
+        "support": 48,
+        "precision": 0.367,
+        "recall": 0.8333,
+        "f1": 0.5096
+      },
+      {
+        "label": "neutral",
+        "support": 99,
+        "precision": 0.5789,
+        "recall": 0.1111,
+        "f1": 0.1864
+      },
+      {
+        "label": "positive",
+        "support": 16,
+        "precision": 0.2571,
+        "recall": 0.5625,
+        "f1": 0.3529
+      }
+    ],
+    "confusion_matrix": {
+      "negative": {
+        "negative": 40,
+        "neutral": 5,
+        "positive": 3
+      },
+      "neutral": {
+        "negative": 65,
+        "neutral": 11,
+        "positive": 23
+      },
+      "positive": {
+        "negative": 4,
+        "neutral": 3,
+        "positive": 9
+      }
+    },
+    "agreement_by_confidence": {
+      "<0.60": {
+        "n": 20,
+        "agreement": 0.25
+      },
+      "0.60-0.70": {
+        "n": 10,
+        "agreement": 0.3
+      },
+      "0.70-0.80": {
+        "n": 21,
+        "agreement": 0.190476
+      },
+      "0.80-0.90": {
+        "n": 22,
+        "agreement": 0.181818
+      },
+      "0.90-1.00": {
+        "n": 90,
+        "agreement": 0.488889
+      }
+    },
+    "agreement_by_route": {
+      "en": {
+        "n": 11,
+        "agreement": 0.636364,
+        "mean_confidence": 0.773896
+      },
+      "id": {
+        "n": 152,
+        "agreement": 0.348684,
+        "mean_confidence": 0.857696
+      }
+    }
+  },
+  "calibration": {
+    "method": "least-squares prevalence correction using the 10K confusion matrix",
+    "observed": {
+      "negative": 0.674603,
+      "neutral": 0.161103,
+      "positive": 0.164294
+    },
+    "corrected": {
+      "negative": 0.302066,
+      "neutral": 0.596477,
+      "positive": 0.101457
+    },
+    "transition_matrix_p_model_given_reference": {
+      "negative": {
+        "negative": 0.855793,
+        "neutral": 0.073476,
+        "positive": 0.070732
+      },
+      "neutral": {
+        "negative": 0.63717,
+        "neutral": 0.210853,
+        "positive": 0.151977
+      },
+      "positive": {
+        "negative": 0.355227,
+        "neutral": 0.12951,
+        "positive": 0.515264
+      }
+    }
+  },
+  "gold40_benchmark_file": "sentiment_router_gold40.benchmark.json"
+}

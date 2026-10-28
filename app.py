@@ -13,6 +13,7 @@ missing the app offers a one-click build in the sidebar.
 
 from __future__ import annotations
 
+import gc
 import html
 import json
 import os
@@ -23,6 +24,9 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import pyarrow as pa
+import pyarrow.dataset as ds
+import pyarrow.parquet as pq
 import streamlit as st
 from plotly.subplots import make_subplots
 
@@ -1063,17 +1067,99 @@ def inject_css() -> None:
     )
     st.markdown(css, unsafe_allow_html=True)
 
+
 # --------------------------------------------------------------------------- #
 # Cached data loading
 # --------------------------------------------------------------------------- #
 
 
-@st.cache_data(show_spinner="Loading cached dataset…")
+# Columns the dashboard never reads. `comments` carries a second timestamp and
+# three ids that no page touches; dropping them saves ~49 MB on the cached
+# frame and the same again on the filtered copy built in main().
+_UNUSED_COLUMNS = {
+    "comments": (
+        "created_utc", "distinguished", "is_submitter", "parent_id",
+        "version", "edited_dt", "is_mod",
+    ),
+}
+
+
+@st.cache_resource(show_spinner="Loading cached dataset…")
 def load(name: str) -> pd.DataFrame:
+    """Read one cache file, keeping its text Arrow-backed.
+
+    At 728k rows every string column costs ~50 bytes of Python object overhead
+    per value, so `comments` alone is 337 MB that way. Reading with the Arrow
+    backend keeps the text in contiguous buffers instead - 151 MB for the same
+    frame, and no per-value objects to churn through during reloads. Everything
+    that is not text is cast back to numpy so the existing pandas and plotly
+    code paths see exactly the dtypes they were written against.
+
+    `cache_resource` rather than `cache_data` for the same reason: cache_data
+    keeps a pickled copy of the value next to the live one. Nothing mutates
+    these frames in place, so sharing them is safe.
+    """
     path = CACHE / f"{name}.parquet"
     if not path.exists():
         return pd.DataFrame()
-    return pd.read_parquet(path)
+
+    df = pd.read_parquet(path, dtype_backend="pyarrow")
+    for col in df.columns:
+        dtype = df[col].dtype
+        if not isinstance(dtype, pd.ArrowDtype):
+            continue
+        arrow_type = dtype.pyarrow_dtype
+        if pa.types.is_string(arrow_type) or pa.types.is_large_string(arrow_type):
+            continue
+        if pa.types.is_timestamp(arrow_type):
+            df[col] = df[col].astype("datetime64[ns]")
+        else:
+            df[col] = df[col].astype(dtype.numpy_dtype)
+
+    unused = _UNUSED_COLUMNS.get(name)
+    if unused:
+        df = df.drop(columns=[c for c in unused if c in df.columns])
+
+    _release_memory()
+    return df
+
+
+def _release_memory() -> None:
+    """Hand freed Arrow buffers back to the OS between heavy allocations."""
+    gc.collect()
+    pa.default_memory_pool().release_unused()
+
+
+def _parquet_rows(name: str) -> int:
+    """Row count from the parquet footer, without materialising the frame."""
+    path = CACHE / f"{name}.parquet"
+    if not path.exists():
+        return 0
+    try:
+        return pq.ParquetFile(str(path)).metadata.num_rows
+    except Exception:  # noqa: BLE001 - fall back to a real read
+        return len(load(name))
+
+
+@st.cache_resource(show_spinner=False)
+def _comment_bodies(ids: tuple[str, ...]) -> dict[str, str]:
+    """Read the text of only the comments that are about to be displayed.
+
+    `comments_text` is ~146 MB resident and the only thing the dashboard ever
+    shows from it is 30 rows (the highest and lowest scoring comments), so it
+    never joins the cached working set. The file shipped with the cache is
+    sorted by `comment_id` in 2k-row groups, which lets the filter below skip
+    almost every group instead of decoding the whole text column.
+    """
+    path = CACHE / "comments_text.parquet"
+    if not ids or not path.exists():
+        return {}
+    table = ds.dataset(str(path), format="parquet").to_table(
+        filter=ds.field("comment_id").isin(list(ids)),
+        columns=["comment_id", "body"],
+    )
+    frame = table.to_pandas()
+    return dict(zip(frame["comment_id"], frame["body"]))
 
 
 @st.cache_data(show_spinner=False)
@@ -1809,7 +1895,7 @@ def page_threads(th: pd.DataFrame) -> None:
         )
 
 
-def page_comments(th: pd.DataFrame, cm: pd.DataFrame, cm_text: pd.DataFrame, f: dict) -> None:
+def page_comments(th: pd.DataFrame, cm: pd.DataFrame, f: dict) -> None:
     st.header(t("cm.title"))
 
     if cm.empty:
@@ -1834,9 +1920,19 @@ def page_comments(th: pd.DataFrame, cm: pd.DataFrame, cm_text: pd.DataFrame, f: 
                                    "Monthly": t("ov.monthly")}[v],
         )
         fr = {"Daily": "D", "Weekly": "W", "Monthly": "MS"}[freq]
-        ts = cm.set_index("created_wib").resample(fr).agg(
-            comments=("comment_id", "count"), avg_score=("score", "mean")
-        ).reset_index()
+        # `cm` carries 16 columns; setting the index on the whole frame would
+        # copy every one of them (~150 MB) just to resample two. Resample a
+        # two-column stand-in instead - `n` is a literal 1, so its sum is the
+        # row count in each bucket.
+        ts = (
+            pd.DataFrame(
+                {"n": 1, "score": cm["score"].to_numpy()},
+                index=pd.DatetimeIndex(cm["created_wib"]),
+            )
+            .resample(fr)
+            .agg(comments=("n", "sum"), avg_score=("score", "mean"))
+            .reset_index()
+        )
         ts = ts[ts["comments"] > 0]
         fig = px.bar(ts, x="created_wib", y="comments",
                      labels={"comments": t("lbl.comments"), "created_wib": ""})
@@ -1847,9 +1943,18 @@ def page_comments(th: pd.DataFrame, cm: pd.DataFrame, cm_text: pd.DataFrame, f: 
         with col1:
             st.subheader(t("cm.score_dist"))
             lo, hi = cm["score"].quantile([0.01, 0.99])
-            clipped = cm["score"].clip(lo, hi)
-            fig = px.histogram(clipped, nbins=60,
-                               labels={"value": t("cm.score_axis"), "count": t("lbl.comments")})
+            # Bin here rather than handing 705k values to the browser: the chart
+            # shows 60 bars either way, and the figure payload drops from ~6 MB
+            # to a few hundred bytes.
+            score_counts, score_edges = np.histogram(
+                cm["score"].clip(lo, hi).to_numpy(), bins=60
+            )
+            hist = pd.DataFrame({
+                "score": (score_edges[:-1] + score_edges[1:]) / 2,
+                "comments": score_counts,
+            })
+            fig = px.bar(hist, x="score", y="comments",
+                         labels={"score": t("lbl.score"), "comments": t("lbl.comments")})
             fig.update_traces(marker_color=EINK["dim1"])
             fig.update_layout(showlegend=False, yaxis_title=t("lbl.comments"),
                               xaxis_title=t("lbl.score"))
@@ -1869,42 +1974,51 @@ def page_comments(th: pd.DataFrame, cm: pd.DataFrame, cm_text: pd.DataFrame, f: 
         st.subheader(t("cm.top_threads"))
         st.caption(t("cm.top_caption"))
         tmap = th.set_index("thread_id")["title"].to_dict()
-        work = cm.copy()
+        work = cm
         if len(work) > 200_000:
             work = work.sample(200_000, random_state=0)
             st.caption(t("cm.sampling"))
 
-        joinable = cm_text if not cm_text.empty else pd.DataFrame(columns=["comment_id", "body"])
-        merged = work.merge(joinable, on="comment_id", how="left")
-        merged["thread_title"] = merged["thread_id"].map(tmap)
+        # Only the 30 rows below are ever shown, so the text for the whole
+        # corpus is not read at all - just the bodies of these comment ids.
+        up = work.nlargest(15, "score")[["comment_id", "score", "thread_id"]].copy()
+        dn = work.nsmallest(15, "score")[["comment_id", "score", "thread_id"]].copy()
+        bodies = _comment_bodies(
+            tuple(str(c) for c in pd.concat([up["comment_id"], dn["comment_id"]]))
+        )
+        for frame in (up, dn):
+            frame["body"] = [bodies.get(str(c), "") for c in frame["comment_id"]]
+            frame["thread_title"] = frame["thread_id"].map(tmap)
 
         col1, col2 = st.columns(2)
         with col1:
             st.markdown(t("cm.highest"))
-            up = merged.nlargest(15, "score")[["score", "body", "thread_title"]]
-            up["body"] = up["body"].fillna("").astype(str).str.slice(0, 160)
+            up["body"] = up["body"].astype(str).str.slice(0, 160)
             st.dataframe(
-                up.rename(columns={"score": t("lbl.score"), "body": t("lbl.comment"),
-                                   "thread_title": t("lbl.thread")}),
+                up[["score", "body", "thread_title"]].rename(
+                    columns={"score": t("lbl.score"), "body": t("lbl.comment"),
+                             "thread_title": t("lbl.thread")}),
                 use_container_width=True, hide_index=True, height=380,
             )
         with col2:
             st.markdown(t("cm.lowest"))
-            dn = merged.nsmallest(15, "score")[["score", "body", "thread_title"]]
-            dn["body"] = dn["body"].fillna("").astype(str).str.slice(0, 160)
+            dn["body"] = dn["body"].astype(str).str.slice(0, 160)
             st.dataframe(
-                dn.rename(columns={"score": t("lbl.score"), "body": t("lbl.comment"),
-                                   "thread_title": t("lbl.thread")}),
+                dn[["score", "body", "thread_title"]].rename(
+                    columns={"score": t("lbl.score"), "body": t("lbl.comment"),
+                             "thread_title": t("lbl.thread")}),
                 use_container_width=True, hide_index=True, height=380,
             )
 
     with tab3:
         st.subheader(t("cm.len_dist"))
+        word_counts, word_edges = np.histogram(cm["word_count"].to_numpy(), bins=60)
         lw = pd.DataFrame({
-            "chars": cm["body_len"], "words": cm["word_count"],
+            "words": (word_edges[:-1] + word_edges[1:]) / 2,
+            "comments": word_counts,
         })
-        fig = px.histogram(lw, x="words", nbins=60,
-                           labels={"words": t("cm.words_per_comment"), "count": t("lbl.comments")})
+        fig = px.bar(lw, x="words", y="comments",
+                     labels={"words": t("cm.words_per_comment"), "comments": t("lbl.comments")})
         fig.update_traces(marker_color=EINK["dim3"])
         fig.update_layout(showlegend=False, yaxis_title=t("lbl.comments"))
         st.plotly_chart(style(fig, 320), use_container_width=True, key="cm_len")
@@ -2187,10 +2301,21 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
     tt["dow"] = tt["created_wib"].dt.day_name()
     tt["hour"] = tt["created_wib"].dt.hour
 
-    c = cm.copy()
-    if not c.empty:
-        c["dow"] = c["created_wib"].dt.day_name()
-        c["hour"] = c["created_wib"].dt.hour
+    c = None
+    if not cm.empty:
+        # Same idea as the volume chart: the heatmap needs only day-of-week and
+        # hour, so derive those as arrays instead of copying all 16 columns.
+        c = pd.DataFrame(
+            {
+                "dow": pd.Categorical(
+                    np.asarray(DOW_ORDER, dtype=object)[
+                        cm["created_wib"].dt.dayofweek.to_numpy()
+                    ],
+                    categories=DOW_ORDER,
+                ),
+                "hour": cm["created_wib"].dt.hour.to_numpy(),
+            }
+        )
 
     st.subheader(t("tm.thread_heat"))
     pivot = (
@@ -2204,10 +2329,10 @@ def page_timing(th: pd.DataFrame, cm: pd.DataFrame) -> None:
     fig.update_xaxes(dtick=2)
     st.plotly_chart(style(fig, 380), use_container_width=True, key="tm_heat_t")
 
-    if not c.empty:
+    if c is not None:
         st.subheader(t("tm.comment_heat"))
         cp = (
-            c.pivot_table(index="dow", columns="hour", values="comment_id", aggfunc="count")
+            c.groupby(["dow", "hour"], observed=False).size().unstack("hour")
             .reindex(DOW_ORDER).reindex(columns=range(24)).fillna(0)
         )
         fig = px.imshow(
@@ -2326,9 +2451,11 @@ def page_sentiment(sent: pd.DataFrame, llm_sent: pd.DataFrame | None = None) -> 
     st.header(t("se.title"))
 
     overview = load_json("sentiment_overview")
-    hf_full = load("sentiment_full_slim") if (CACHE / "sentiment_full_slim.parquet").exists() else pd.DataFrame()
+    # Only the presence of labels is used below, and the full frame is ~259 MB
+    # resident. The footer answers "is there data?" without reading the columns.
+    has_hf_full = _parquet_rows("sentiment_full_slim") > 0
 
-    if not overview or hf_full.empty:
+    if not overview or not has_hf_full:
         st.error(t("se.missing"))
         return
 
@@ -2765,7 +2892,7 @@ kappa, confusion matrix), sentiment by flair and by month, a disagreement explor
 }
 
 
-def page_methodology(th_all: pd.DataFrame, cm_all: pd.DataFrame) -> None:
+def page_methodology(th_all: pd.DataFrame, n_comments: int) -> None:
     """Plain-language guide to the dataset, the pages, and the caveats."""
     st.header(f"📖 {t('nav.methodology')}")
 
@@ -2777,7 +2904,7 @@ def page_methodology(th_all: pd.DataFrame, cm_all: pd.DataFrame) -> None:
     total_actual = th_all["total_comments_actual"].sum()
     vals = {
         "threads": fmt_int(len(th_all)),
-        "comments": fmt_int(len(cm_all)),
+        "comments": fmt_int(n_comments),
         "span": f"{fmt_date(th_all['created_wib'].min())} → {fmt_date(th_all['created_wib'].max())}",
         "avg_score": f"{th_all['score'].mean():.1f}",
         "median_score": f"{th_all['score'].median():.0f}",
@@ -2818,6 +2945,7 @@ def main() -> None:
             if res.returncode == 0:
                 st.success(t("msg.built"))
                 st.cache_data.clear()
+                st.cache_resource.clear()
                 st.rerun()
             else:
                 st.error(t("msg.build_failed"))
@@ -2826,8 +2954,8 @@ def main() -> None:
 
     th_all = load("threads")
     cm_all = load("comments")
-    # Comment text is loaded lazily; aggregate views never need the large body column.
-    cm_text = load("comments_text") if (CACHE / "comments_text.parquet").exists() else pd.DataFrame()
+    # `comments_text` is deliberately absent: it is 146 MB and only 30 rows of it
+    # are ever on screen, so page_comments reads those bodies on demand.
     sent = load("sentiment")
     llm_sent = load("comment_sentiment_llm_10k") if (CACHE / "comment_sentiment_llm_10k.parquet").exists() else pd.DataFrame()
     meta = load_meta()
@@ -2870,28 +2998,34 @@ def main() -> None:
     # Comments are kept to the threads that survived filtering (join on thread_id).
     keep_ids = set(th["thread_id"])
     cm = cm_all[cm_all["thread_id"].isin(keep_ids)]
+    # The filtered frame is what every page uses; only its total row count is
+    # needed from the full one, so let the 150 MB original go.
+    n_comments_all = len(cm_all)
+    del cm_all
+    _release_memory()
 
     st.sidebar.metric(t("sb.threads_selected"), fmt_int(len(th)))
     st.sidebar.metric(t("sb.comments_selected"), fmt_int(len(cm)))
     st.sidebar.caption(
         t("sb.pct_of").format(
             tp=f"{len(th) / max(len(th_all), 1):.1%}",
-            cp=f"{len(cm) / max(len(cm_all), 1):.1%}",
+            cp=f"{len(cm) / max(n_comments_all, 1):.1%}",
         )
     )
     if st.sidebar.button(t("sb.clear_cache"), use_container_width=True):
         st.cache_data.clear()
+        st.cache_resource.clear()
         st.rerun()
 
     pages = {
         t("nav.overview"): lambda: page_overview(th, cm, f),
         t("nav.threads"): lambda: page_threads(th),
-        t("nav.comments"): lambda: page_comments(th, cm, cm_text, f),
+        t("nav.comments"): lambda: page_comments(th, cm, f),
         t("nav.authors"): lambda: page_authors(th, cm),
         t("nav.flairs"): lambda: page_flairs(th),
         t("nav.timing"): lambda: page_timing(th, cm),
         t("nav.sentiment"): lambda: page_sentiment(sent, llm_sent),
-        t("nav.methodology"): lambda: page_methodology(th_all, cm_all),
+        t("nav.methodology"): lambda: page_methodology(th_all, n_comments_all),
     }
     tabs = st.tabs(list(pages.keys()))
     for tab, render in zip(tabs, pages.values()):

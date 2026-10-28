@@ -1,0 +1,29 @@
+{
+  "built_at": "2026-10-19T05:51:30+00:00",
+  "source_dir": "D:\\AI Stuff\\Indonesian subreddit dataset",
+  "sources": {
+    "threads": {
+      "rows": 12976,
+      "min_wib": "2025-12-27 21:15:31",
+      "max_wib": "2026-10-02 00:21:07",
+      "flairs": 35,
+      "authors": 2642
+    },
+    "comments": {
+      "rows": 728522,
+      "min_wib": "2025-12-28 06:08:03",
+      "max_wib": "2026-10-02 00:35:34",
+      "authors": 24451,
+      "threads_referenced": 12642
+    },
+    "sentiment": {
+      "rows": 50
+    }
+  },
+  "notes": [
+    "num_comments (stale Reddit counter) is shown alongside total_comments_actual (truth).",
+    "edited == 1970-01-01 00:00:00 is a sentinel for 'never edited'; exposed as was_edited.",
+    "Dashboard duplicate thread_ids resolved by keeping the highest dataset version.",
+    "Derived files (leaderboard, flair_performance, flair_top_words, wib_hourly) are static snapshots and do NOT respond to filters; all other views are recomputed live."
+  ]
+}

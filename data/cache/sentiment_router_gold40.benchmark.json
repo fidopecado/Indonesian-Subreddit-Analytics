@@ -1,0 +1,33 @@
+{
+  "matched_rows": 40,
+  "gold_distribution": {
+    "neutral": 21,
+    "negative": 17,
+    "positive": 2
+  },
+  "prediction_distribution": {
+    "negative": 29,
+    "positive": 7,
+    "neutral": 4
+  },
+  "accuracy": 0.5,
+  "mean_confidence": 0.8997799754142761,
+  "accuracy_high_confidence_ge_0_8": 0.6129032258064516,
+  "confusion_matrix": {
+    "negative": {
+      "negative": 15,
+      "neutral": 14,
+      "positive": 0
+    },
+    "neutral": {
+      "negative": 1,
+      "neutral": 3,
+      "positive": 0
+    },
+    "positive": {
+      "negative": 1,
+      "neutral": 4,
+      "positive": 2
+    }
+  }
+}
