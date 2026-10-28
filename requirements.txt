@@ -9,6 +9,15 @@
 # for example, replaced the BaseWeb tabs/selects the theme was written for).
 # Bump this together with the selectors in CSS_TEMPLATE, never on its own.
 streamlit==1.40.1
+# Tornado 6.5 clamps websocket_ping_timeout to websocket_ping_interval, and
+# Streamlit 1.40 asks for interval=1s / timeout=30s -> the effective timeout
+# becomes 1s. A browser that takes longer than a second to answer a ping (which
+# happens while it applies a big first render) gets its websocket dropped
+# mid-run; the client reconnects, the server replays cached ForwardMsgs, and the
+# 1.40 frontend applies the already-applied deltas again, which throws
+# "Bad 'setIn' index N" behind a "Bad message format" modal. 6.4 keeps the 30s
+# window (a missing pong has to be 30s stale before the socket is closed).
+tornado>=6.0.3,<6.5
 pandas>=2.1,<3
 numpy>=1.26,<3
 plotly>=5.22,<6
