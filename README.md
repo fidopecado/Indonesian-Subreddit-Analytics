@@ -5,15 +5,13 @@ Interactive Streamlit dashboard + sentiment-labeling pipeline for the
 
 ## Live demo
 
-Hosted on Streamlit Community Cloud from this repository (branch `master`,
-entry point `app.py`):
+**https://fidopecado-indonesian-subreddit-analytics-app-jsnenm.streamlit.app/**
 
-**https://share.streamlit.io/deploy?repository=fidopecado/Indonesian-Subreddit-Analytics&branch=master&mainModule=app.py**
-
-The app loads the committed parquet cache directly, so the hosted instance needs
-no raw data and no pipeline run. The cache is versioned for exactly this reason:
-`data/raw/` and `artifacts/` stay ignored, but the handful of parquets
-`app.py` reads are committed (~143 MB, largest file 72 MB).
+Hosted on Streamlit Community Cloud from this repository (branch `master`, entry
+point `app.py`). The app loads the committed parquet cache directly, so the
+hosted instance needs no raw data and no pipeline run. The cache is versioned for
+exactly this reason: `data/raw/` and `artifacts/` stay ignored, but the handful of
+parquets `app.py` reads are committed (~143 MB, largest file 72 MB).
 
 It is sized to fit Streamlit Community Cloud's 1 GB ceiling - the peak resident
 set is ~0.71 GB, down from ~1.42 GB before the load path was reworked (see
