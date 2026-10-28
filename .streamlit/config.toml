@@ -10,9 +10,11 @@ secondaryBackgroundColor = "#EFEFED"  # raised panels
 textColor = "#333333"               # ink (e-ink ramp, darkest)
 font = "monospace"
 
-# Streamlit 1.40 sends a PageProfile telemetry message at the end of every run;
-# its frontend handler can fire before the session is registered and pops a
-# "Bad message format" modal on a fraction of fresh sessions. Turning usage
-# stats off removes the message (and the telemetry) entirely.
+# Streamlit 1.40 sends a PageProfile telemetry message at the end of every run.
+# Its frontend handler reads session info that a websocket reconnect has already
+# discarded, so the message throws and the app is covered by a "Bad message
+# format" modal. Locally this block is enough to suppress it; Community Cloud
+# starts the server with usage stats forced on, so app.py also clears the flag
+# on the run context itself.
 [browser]
 gatherUsageStats = false

@@ -29,6 +29,7 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import streamlit as st
 from plotly.subplots import make_subplots
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 BASE = Path(__file__).resolve().parent
 CACHE = BASE / "data" / "cache"
@@ -44,6 +45,19 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Streamlit 1.40's frontend discards its session info on every websocket
+# reconnect, and the page-profile telemetry message that the server sends at the
+# end of a run reads that session info on arrival. On Community Cloud the
+# reconnect lands mid-run, so the message throws in the browser and the frontend
+# paints its generic "Bad message format" modal over a perfectly healthy app.
+# Cloud also starts the server with usage stats on, which beats the
+# `[browser] gatherUsageStats = false` in .streamlit/config.toml, so the flag is
+# cleared on the live run context instead - that attribute is what the runner
+# checks before it enqueues the message.
+_run_ctx = get_script_run_ctx()
+if _run_ctx is not None:
+    _run_ctx.gather_usage_stats = False
 
 NO_FLAIR = "No Flair"
 DOW_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
