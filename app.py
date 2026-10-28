@@ -1180,7 +1180,13 @@ def load_json(name: str) -> dict:
 
 
 def cache_ready() -> bool:
-    required = ["threads.parquet", "comments.parquet", "dashboard.parquet"]
+    """Are the files the dashboard cannot run without present?
+
+    `dashboard.parquet` is deliberately not checked: no page reads it, it is a
+    by-product of build_cache.py (threads enriched with the true comment count).
+    Requiring it would mean shipping 4 MB that nothing opens.
+    """
+    required = ["threads.parquet", "comments.parquet", "meta.json"]
     return all((CACHE / f).exists() for f in required)
 
 
